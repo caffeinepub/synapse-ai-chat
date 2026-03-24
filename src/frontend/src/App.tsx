@@ -85,6 +85,8 @@ const PANEL_TITLES = [
   "[CRYPTO DECRYPTOR]",
 ];
 
+const STORAGE_KEY = "hacker_terminal_saved_msgs";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function randInt(min: number, max: number) {
@@ -131,6 +133,12 @@ interface TermLine {
   text: string;
   status?: string;
   type: LineType;
+}
+
+interface SavedMessage {
+  id: string;
+  text: string;
+  createdAt: number;
 }
 
 let lineIdCounter = 0;
@@ -227,7 +235,6 @@ function TermPanel({
         ? next.slice(next.length - MAX_LINES)
         : next;
     });
-    // Only auto-scroll to bottom when not paused
     if (!pausedRef.current) {
       setTimeout(() => {
         if (scrollRef.current) {
@@ -249,7 +256,6 @@ function TermPanel({
               ? next.slice(next.length - MAX_LINES)
               : next;
           });
-          // Only auto-scroll when not paused (already guarded by pausedRef check above)
           if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
           }
@@ -357,9 +363,54 @@ export default function App() {
   const [paused, setPaused] = useState(false);
   const [showAddMsg, setShowAddMsg] = useState(false);
   const [msgInput, setMsgInput] = useState("");
+  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [injectedLines, setInjectedLines] = useState<(TermLine | null)[]>(
     Array(6).fill(null),
   );
+
+  // ── Saved messages (localStorage) ──
+  const [savedMessages, setSavedMessages] = useState<SavedMessage[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? (JSON.parse(stored) as SavedMessage[]) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const persistMessages = (msgs: SavedMessage[]) => {
+    setSavedMessages(msgs);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs));
+    } catch {
+      // ignore
+    }
+  };
+
+  const deleteMessage = (id: string) => {
+    persistMessages(savedMessages.filter((m) => m.id !== id));
+  };
+
+  // On load: re-inject saved messages into panels with staggered delay
+  const initialMsgsRef = useRef<SavedMessage[]>(savedMessages);
+  useEffect(() => {
+    const msgs = initialMsgsRef.current;
+    if (msgs.length === 0) return;
+    msgs.forEach((msg, i) => {
+      setTimeout(
+        () => {
+          const newLine: TermLine = {
+            id: lineIdCounter++,
+            text: msg.text,
+            type: "custom",
+          };
+          setInjectedLines(Array(6).fill(newLine));
+          setTimeout(() => setInjectedLines(Array(6).fill(null)), 100);
+        },
+        i * 600 + 1500,
+      );
+    });
+  }, []);
 
   // Clock
   useEffect(() => {
@@ -401,15 +452,29 @@ export default function App() {
 
   const handleAddMessage = () => {
     if (!msgInput.trim()) return;
+    const text = msgInput.trim();
     const newLine: TermLine = {
       id: lineIdCounter++,
-      text: msgInput.trim(),
+      text,
       type: "custom",
     };
     // Inject into all panels
     setInjectedLines(Array(6).fill(newLine));
     setTimeout(() => setInjectedLines(Array(6).fill(null)), 100);
+
+    // Save permanently (only if not already a saved message being re-injected)
+    if (!selectedMsgId) {
+      const newSaved: SavedMessage = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        text,
+        createdAt: Date.now(),
+      };
+      persistMessages([...savedMessages, newSaved]);
+    }
+
     setMsgInput("");
+    setSelectedMsgId(null);
+    // Close modal and return to panels
     setShowAddMsg(false);
   };
 
@@ -526,9 +591,31 @@ export default function App() {
             cursor: "pointer",
             textTransform: "uppercase",
             boxShadow: "0 0 6px oklch(0.70 0.18 290 / 0.3)",
+            position: "relative",
           }}
         >
           + ADD MSG
+          {savedMessages.length > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-6px",
+                right: "-6px",
+                background: "oklch(0.70 0.18 290)",
+                color: "oklch(0.08 0.01 290)",
+                borderRadius: "50%",
+                width: "14px",
+                height: "14px",
+                fontSize: "0.5rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: "bold",
+              }}
+            >
+              {savedMessages.length}
+            </span>
+          )}
         </button>
 
         <span
@@ -701,10 +788,12 @@ export default function App() {
                 border: "1px solid oklch(0.85 0.22 145 / 0.6)",
                 boxShadow: "0 0 40px oklch(0.85 0.22 145 / 0.2)",
                 padding: "28px 32px",
-                width: "min(480px, 90vw)",
+                width: "min(520px, 92vw)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "16px",
+                maxHeight: "85vh",
+                overflowY: "auto",
               }}
             >
               <div
@@ -725,39 +814,234 @@ export default function App() {
                   letterSpacing: "0.08em",
                 }}
               >
-                Yeh message sabhi panels mein bright color mein dikhega
+                {selectedMsgId
+                  ? "Saved message selected — INJECT karo ya DELETE karo"
+                  : "Message sabhi panels mein inject hoga aur hamesha ke liye save rahega"}
               </div>
-              <input
-                type="text"
-                value={msgInput}
-                onChange={(e) => setMsgInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddMessage();
-                  if (e.key === "Escape") setShowAddMsg(false);
-                }}
-                placeholder="Apna message likho..."
-                data-ocid="add_msg.input"
-                style={{
-                  background: "oklch(0.04 0.008 145)",
-                  border: "1px solid oklch(0.85 0.22 145 / 0.4)",
-                  color: "oklch(0.85 0.22 145)",
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.08em",
-                  padding: "10px 12px",
-                  outline: "none",
-                  fontFamily: "inherit",
-                }}
-              />
+
+              {/* Input Row */}
+              <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  value={msgInput}
+                  onChange={(e) => {
+                    setMsgInput(e.target.value);
+                    setSelectedMsgId(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddMessage();
+                    if (e.key === "Escape") setShowAddMsg(false);
+                  }}
+                  placeholder="Apna message likho..."
+                  data-ocid="add_msg.input"
+                  style={{
+                    flex: 1,
+                    background: selectedMsgId
+                      ? "oklch(0.04 0.008 75)"
+                      : "oklch(0.04 0.008 145)",
+                    border: selectedMsgId
+                      ? "1px solid oklch(0.95 0.18 75 / 0.6)"
+                      : "1px solid oklch(0.85 0.22 145 / 0.4)",
+                    color: selectedMsgId
+                      ? "oklch(0.95 0.18 75)"
+                      : "oklch(0.85 0.22 145)",
+                    fontSize: "0.75rem",
+                    letterSpacing: "0.08em",
+                    padding: "10px 12px",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    transition: "all 0.2s",
+                  }}
+                />
+                {selectedMsgId ? (
+                  <button
+                    type="button"
+                    data-ocid="add_msg.delete_button"
+                    onClick={() => {
+                      deleteMessage(selectedMsgId);
+                      setMsgInput("");
+                      setSelectedMsgId(null);
+                    }}
+                    style={{
+                      padding: "10px 16px",
+                      border: "1px solid oklch(0.62 0.22 25 / 0.9)",
+                      background: "oklch(0.62 0.22 25 / 0.15)",
+                      color: "oklch(0.72 0.22 25)",
+                      fontSize: "0.65rem",
+                      letterSpacing: "0.15em",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      boxShadow: "0 0 10px oklch(0.62 0.22 25 / 0.4)",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    ✕ DELETE
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    data-ocid="add_msg.submit_button"
+                    onClick={handleAddMessage}
+                    style={{
+                      padding: "10px 16px",
+                      border: "1px solid oklch(0.70 0.18 290 / 0.8)",
+                      background: "oklch(0.70 0.18 290 / 0.1)",
+                      color: "oklch(0.70 0.18 290)",
+                      fontSize: "0.65rem",
+                      letterSpacing: "0.15em",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      boxShadow: "0 0 10px oklch(0.70 0.18 290 / 0.3)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    INJECT
+                  </button>
+                )}
+              </div>
+
+              {/* Saved Messages List */}
+              {savedMessages.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "oklch(0.85 0.22 145 / 0.6)",
+                      fontSize: "0.55rem",
+                      letterSpacing: "0.15em",
+                      textTransform: "uppercase",
+                      borderBottom: "1px solid oklch(0.85 0.22 145 / 0.2)",
+                      paddingBottom: "6px",
+                    }}
+                  >
+                    Saved Messages ({savedMessages.length}) — text par click
+                    karo select karne ke liye
+                  </div>
+                  {savedMessages.map((msg) => {
+                    const isSelected = selectedMsgId === msg.id;
+                    return (
+                      <div
+                        key={msg.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "6px 10px",
+                          background: isSelected
+                            ? "oklch(0.08 0.015 75)"
+                            : "oklch(0.04 0.008 145)",
+                          border: isSelected
+                            ? "1px solid oklch(0.95 0.18 75 / 0.7)"
+                            : "1px solid oklch(0.95 0.18 75 / 0.25)",
+                          boxShadow: isSelected
+                            ? "0 0 8px oklch(0.95 0.18 75 / 0.2)"
+                            : "none",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.6rem",
+                            color: isSelected
+                              ? "oklch(0.95 0.18 75)"
+                              : "oklch(0.95 0.18 75 / 0.6)",
+                          }}
+                        >
+                          {isSelected ? "▶" : "○"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMsgInput(msg.text);
+                            setSelectedMsgId(msg.id);
+                          }}
+                          title="Click karo select karne ke liye"
+                          style={{
+                            flex: 1,
+                            background: "none",
+                            border: "none",
+                            textAlign: "left",
+                            color: isSelected
+                              ? "oklch(0.95 0.18 75)"
+                              : "oklch(0.80 0.14 75)",
+                            fontSize: "0.65rem",
+                            letterSpacing: "0.05em",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            cursor: "pointer",
+                            fontWeight: isSelected ? "bold" : "normal",
+                            textDecoration: isSelected ? "none" : "underline",
+                            textDecorationStyle: "dotted",
+                            textDecorationColor: "oklch(0.95 0.18 75 / 0.4)",
+                            transition: "all 0.15s",
+                            fontFamily: "inherit",
+                            padding: 0,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.color =
+                                "oklch(0.95 0.18 75)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.color =
+                                "oklch(0.80 0.14 75)";
+                            }
+                          }}
+                        >
+                          {msg.text}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteMessage(msg.id);
+                            if (selectedMsgId === msg.id) {
+                              setMsgInput("");
+                              setSelectedMsgId(null);
+                            }
+                          }}
+                          title="Delete karo"
+                          style={{
+                            background: "none",
+                            border: "1px solid oklch(0.62 0.22 25 / 0.5)",
+                            color: "oklch(0.62 0.22 25)",
+                            fontSize: "0.6rem",
+                            cursor: "pointer",
+                            padding: "2px 7px",
+                            letterSpacing: "0.1em",
+                            fontFamily: "inherit",
+                            flexShrink: 0,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <div
                 style={{
                   display: "flex",
-                  gap: "12px",
                   justifyContent: "flex-end",
                 }}
               >
                 <button
                   type="button"
-                  onClick={() => setShowAddMsg(false)}
+                  onClick={() => {
+                    setShowAddMsg(false);
+                    setSelectedMsgId(null);
+                    setMsgInput("");
+                  }}
                   style={{
                     padding: "8px 20px",
                     border: "1px solid oklch(0.56 0.03 145 / 0.5)",
@@ -769,25 +1053,7 @@ export default function App() {
                     fontFamily: "inherit",
                   }}
                 >
-                  CANCEL
-                </button>
-                <button
-                  type="button"
-                  data-ocid="add_msg.submit_button"
-                  onClick={handleAddMessage}
-                  style={{
-                    padding: "8px 20px",
-                    border: "1px solid oklch(0.70 0.18 290 / 0.8)",
-                    background: "oklch(0.70 0.18 290 / 0.1)",
-                    color: "oklch(0.70 0.18 290)",
-                    fontSize: "0.65rem",
-                    letterSpacing: "0.15em",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    boxShadow: "0 0 10px oklch(0.70 0.18 290 / 0.3)",
-                  }}
-                >
-                  INJECT
+                  CLOSE
                 </button>
               </div>
             </motion.div>

@@ -116,7 +116,15 @@ function randProgress() {
   return `Decrypting... ${bar} ${pct}%`;
 }
 
-type LineType = "cmd" | "file" | "hex" | "sys" | "ip" | "progress" | "login";
+type LineType =
+  | "cmd"
+  | "file"
+  | "hex"
+  | "sys"
+  | "ip"
+  | "progress"
+  | "login"
+  | "custom";
 
 interface TermLine {
   id: number;
@@ -193,24 +201,55 @@ const MAX_LINES = 60;
 function TermPanel({
   title,
   panelIndex,
-}: { title: string; panelIndex: number }) {
+  paused,
+  injectLine,
+}: {
+  title: string;
+  panelIndex: number;
+  paused: boolean;
+  injectLine: TermLine | null;
+}) {
   const [lines, setLines] = useState<TermLine[]>(() =>
     Array.from({ length: 12 }, () => generateLine(panelIndex)),
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(paused);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    if (injectLine === null) return;
+    setLines((prev) => {
+      const next = [...prev, injectLine];
+      return next.length > MAX_LINES
+        ? next.slice(next.length - MAX_LINES)
+        : next;
+    });
+    // Only auto-scroll to bottom when not paused
+    if (!pausedRef.current) {
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [injectLine]);
 
   useEffect(() => {
     const delay = randInt(200, 800);
     const timer = setTimeout(() => {
       const interval = setInterval(
         () => {
+          if (pausedRef.current) return;
           setLines((prev) => {
             const next = [...prev, generateLine(panelIndex)];
             return next.length > MAX_LINES
               ? next.slice(next.length - MAX_LINES)
               : next;
           });
-          // Scroll to bottom after each update
+          // Only auto-scroll when not paused (already guarded by pausedRef check above)
           if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
           }
@@ -227,7 +266,6 @@ function TermPanel({
       className="flex flex-col panel-bg neon-border panel-pulse"
       style={{ height: "100%", overflow: "hidden" }}
     >
-      {/* Panel header */}
       <div
         className="flex items-center gap-2 px-2 py-1 shrink-0"
         style={{
@@ -249,11 +287,13 @@ function TermPanel({
         </span>
         <span className="blink-cursor neon-text text-xs">▮</span>
       </div>
-      {/* Scrolling content */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-hidden px-2 py-1"
-        style={{ scrollBehavior: "smooth" }}
+        className="flex-1 px-2 py-1 term-scrollable"
+        style={{
+          overflowY: paused ? "auto" : "hidden",
+          scrollBehavior: "smooth",
+        }}
       >
         {lines.map((line) => (
           <div
@@ -261,7 +301,17 @@ function TermPanel({
             className="text-xs leading-tight py-px flex gap-1 flex-wrap"
             style={{ lineHeight: "1.3", fontSize: "0.65rem" }}
           >
-            {line.type === "sys" ? (
+            {line.type === "custom" ? (
+              <span
+                style={{
+                  color: "oklch(0.95 0.18 75)",
+                  fontWeight: "bold",
+                  textShadow: "0 0 8px oklch(0.95 0.18 75 / 0.8)",
+                }}
+              >
+                ▶ {line.text}
+              </span>
+            ) : line.type === "sys" ? (
               <span
                 className="amber-text font-bold"
                 style={{ textShadow: "0 0 6px oklch(0.80 0.18 75 / 0.7)" }}
@@ -287,7 +337,6 @@ function TermPanel({
           </div>
         ))}
       </div>
-      {/* Scanline overlay */}
       <div className="scanline absolute inset-0 pointer-events-none" />
     </div>
   );
@@ -305,6 +354,12 @@ export default function App() {
   const [sessionId] = useState(() => randHex(8).replace("0x", "SESS-"));
   const [fakeIp] = useState(() => randIp());
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [paused, setPaused] = useState(false);
+  const [showAddMsg, setShowAddMsg] = useState(false);
+  const [msgInput, setMsgInput] = useState("");
+  const [injectedLines, setInjectedLines] = useState<(TermLine | null)[]>(
+    Array(6).fill(null),
+  );
 
   // Clock
   useEffect(() => {
@@ -314,11 +369,12 @@ export default function App() {
 
   // Flash messages
   const triggerFlash = useCallback(() => {
+    if (paused) return;
     const msg = randItem(FLASH_MESSAGES);
     setFlashMsg(msg);
     if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
     flashTimeoutRef.current = setTimeout(() => setFlashMsg(null), 2200);
-  }, []);
+  }, [paused]);
 
   useEffect(() => {
     const initial = setTimeout(() => {
@@ -332,15 +388,29 @@ export default function App() {
   // ESC key easter egg
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowEasterEgg(true);
+      if (e.key === "Escape" && !showAddMsg) setShowEasterEgg(true);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [showAddMsg]);
 
   const restart = () => {
     setShowEasterEgg(false);
     setFlashMsg(null);
+  };
+
+  const handleAddMessage = () => {
+    if (!msgInput.trim()) return;
+    const newLine: TermLine = {
+      id: lineIdCounter++,
+      text: msgInput.trim(),
+      type: "custom",
+    };
+    // Inject into all panels
+    setInjectedLines(Array(6).fill(newLine));
+    setTimeout(() => setInjectedLines(Array(6).fill(null)), 100);
+    setMsgInput("");
+    setShowAddMsg(false);
   };
 
   const timeStr = time.toTimeString().slice(0, 8);
@@ -374,7 +444,7 @@ export default function App() {
           display: "flex",
           alignItems: "center",
           paddingInline: "12px",
-          gap: "16px",
+          gap: "12px",
           boxShadow: "0 0 20px oklch(0.85 0.22 145 / 0.15)",
         }}
       >
@@ -412,6 +482,55 @@ export default function App() {
 
         <div style={{ flex: 1 }} />
 
+        {/* Pause / Play Button */}
+        <button
+          type="button"
+          data-ocid="controls.pause_button"
+          onClick={() => setPaused((p) => !p)}
+          title={paused ? "Terminal chalao" : "Terminal rokein"}
+          style={{
+            padding: "2px 10px",
+            border: `1px solid ${
+              paused
+                ? "oklch(0.62 0.22 25 / 0.8)"
+                : "oklch(0.85 0.22 145 / 0.7)"
+            }`,
+            background: "none",
+            color: paused ? "oklch(0.62 0.22 25)" : "oklch(0.85 0.22 145)",
+            fontSize: "0.6rem",
+            letterSpacing: "0.15em",
+            cursor: "pointer",
+            textTransform: "uppercase",
+            transition: "all 0.2s",
+            boxShadow: paused
+              ? "0 0 6px oklch(0.62 0.22 25 / 0.4)"
+              : "0 0 6px oklch(0.85 0.22 145 / 0.3)",
+          }}
+        >
+          {paused ? "▶ RESUME" : "⏸ PAUSE"}
+        </button>
+
+        {/* Add Message Button */}
+        <button
+          type="button"
+          data-ocid="controls.add_msg_button"
+          onClick={() => setShowAddMsg(true)}
+          title="Apna message add karein"
+          style={{
+            padding: "2px 10px",
+            border: "1px solid oklch(0.70 0.18 290 / 0.8)",
+            background: "none",
+            color: "oklch(0.70 0.18 290)",
+            fontSize: "0.6rem",
+            letterSpacing: "0.15em",
+            cursor: "pointer",
+            textTransform: "uppercase",
+            boxShadow: "0 0 6px oklch(0.70 0.18 290 / 0.3)",
+          }}
+        >
+          + ADD MSG
+        </button>
+
         <span
           style={{
             padding: "2px 8px",
@@ -429,14 +548,16 @@ export default function App() {
           className="blink-cursor"
           style={{
             padding: "2px 8px",
-            border: "1px solid oklch(0.62 0.22 25 / 0.8)",
-            color: "oklch(0.62 0.22 25)",
+            border: paused
+              ? "1px solid oklch(0.56 0.03 145 / 0.5)"
+              : "1px solid oklch(0.62 0.22 25 / 0.8)",
+            color: paused ? "oklch(0.56 0.03 145)" : "oklch(0.62 0.22 25)",
             fontSize: "0.6rem",
             letterSpacing: "0.15em",
-            textShadow: "0 0 6px oklch(0.62 0.22 25 / 0.8)",
+            textShadow: paused ? "none" : "0 0 6px oklch(0.62 0.22 25 / 0.8)",
           }}
         >
-          ACTIVE
+          {paused ? "PAUSED" : "ACTIVE"}
         </span>
         <span
           style={{
@@ -465,7 +586,12 @@ export default function App() {
       >
         {PANEL_TITLES.map((title, i) => (
           <div key={title} style={{ position: "relative", overflow: "hidden" }}>
-            <TermPanel title={title} panelIndex={i} />
+            <TermPanel
+              title={title}
+              panelIndex={i}
+              paused={paused}
+              injectLine={injectedLines[i]}
+            />
           </div>
         ))}
       </main>
@@ -520,17 +646,16 @@ export default function App() {
           <div
             style={{
               display: "inline-block",
-              animation: "scroll-status 30s linear infinite",
+              animation: paused ? "none" : "scroll-status 30s linear infinite",
               color: "oklch(0.70 0.12 145)",
               fontSize: "0.55rem",
               whiteSpace: "nowrap",
               letterSpacing: "0.06em",
             }}
           >
-            SCANNING PORTS... BRUTE FORCING SSH... ENUMERATING SUBDOMAINS...
-            EXFILTRATING DATA... INJECTING SHELLCODE... BYPASSING WAF...
-            PRIVILEGE ESCALATION IN PROGRESS... C2 BEACON ACTIVE... LATERAL
-            MOVEMENT DETECTED...
+            {paused
+              ? "[ TERMINAL PAUSED — scroll panels with mouse wheel ]"
+              : "SCANNING PORTS... BRUTE FORCING SSH... ENUMERATING SUBDOMAINS... EXFILTRATING DATA... INJECTING SHELLCODE... BYPASSING WAF... PRIVILEGE ESCALATION IN PROGRESS... C2 BEACON ACTIVE... LATERAL MOVEMENT DETECTED..."}
           </div>
         </div>
         <span
@@ -544,6 +669,131 @@ export default function App() {
           {dateStr} {timeStr}
         </span>
       </footer>
+
+      {/* ── Add Message Modal ── */}
+      <AnimatePresence>
+        {showAddMsg && (
+          <motion.div
+            key="add-msg"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 80,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "oklch(0.03 0.005 145 / 0.85)",
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowAddMsg(false);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              style={{
+                background: "oklch(0.07 0.012 145)",
+                border: "1px solid oklch(0.85 0.22 145 / 0.6)",
+                boxShadow: "0 0 40px oklch(0.85 0.22 145 / 0.2)",
+                padding: "28px 32px",
+                width: "min(480px, 90vw)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
+            >
+              <div
+                style={{
+                  color: "oklch(0.85 0.22 145)",
+                  fontSize: "0.75rem",
+                  letterSpacing: "0.2em",
+                  fontWeight: "bold",
+                  textShadow: "0 0 8px oklch(0.85 0.22 145 / 0.5)",
+                }}
+              >
+                + INJECT CUSTOM MESSAGE
+              </div>
+              <div
+                style={{
+                  color: "oklch(0.56 0.03 145)",
+                  fontSize: "0.6rem",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                Yeh message sabhi panels mein bright color mein dikhega
+              </div>
+              <input
+                type="text"
+                value={msgInput}
+                onChange={(e) => setMsgInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddMessage();
+                  if (e.key === "Escape") setShowAddMsg(false);
+                }}
+                placeholder="Apna message likho..."
+                data-ocid="add_msg.input"
+                style={{
+                  background: "oklch(0.04 0.008 145)",
+                  border: "1px solid oklch(0.85 0.22 145 / 0.4)",
+                  color: "oklch(0.85 0.22 145)",
+                  fontSize: "0.75rem",
+                  letterSpacing: "0.08em",
+                  padding: "10px 12px",
+                  outline: "none",
+                  fontFamily: "inherit",
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowAddMsg(false)}
+                  style={{
+                    padding: "8px 20px",
+                    border: "1px solid oklch(0.56 0.03 145 / 0.5)",
+                    background: "none",
+                    color: "oklch(0.56 0.03 145)",
+                    fontSize: "0.65rem",
+                    letterSpacing: "0.15em",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="button"
+                  data-ocid="add_msg.submit_button"
+                  onClick={handleAddMessage}
+                  style={{
+                    padding: "8px 20px",
+                    border: "1px solid oklch(0.70 0.18 290 / 0.8)",
+                    background: "oklch(0.70 0.18 290 / 0.1)",
+                    color: "oklch(0.70 0.18 290)",
+                    fontSize: "0.65rem",
+                    letterSpacing: "0.15em",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    boxShadow: "0 0 10px oklch(0.70 0.18 290 / 0.3)",
+                  }}
+                >
+                  INJECT
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Flash Message Overlay ── */}
       <AnimatePresence>

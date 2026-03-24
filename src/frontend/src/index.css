@@ -1,0 +1,204 @@
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0rem;
+
+    /* Cyberpunk Terminal Theme */
+    --background: 0.055 0.01 145;
+    --foreground: 0.88 0.18 145;
+    --card: 0.08 0.012 145;
+    --card-foreground: 0.88 0.18 145;
+    --popover: 0.09 0.014 145;
+    --popover-foreground: 0.88 0.18 145;
+    --primary: 0.85 0.22 145;
+    --primary-foreground: 0.05 0.01 145;
+    --secondary: 0.1 0.014 145;
+    --secondary-foreground: 0.88 0.18 145;
+    --muted: 0.1 0.014 145;
+    --muted-foreground: 0.56 0.03 145;
+    --accent: 0.12 0.018 145;
+    --accent-foreground: 0.88 0.18 145;
+    --destructive: 0.62 0.22 25;
+    --destructive-foreground: 0.98 0 0;
+    --border: 0.85 0.22 145;
+    --input: 0.1 0.014 145;
+    --ring: 0.85 0.22 145;
+
+    --neon-green: 0.85 0.22 145;
+    --neon-green-dim: 0.7 0.18 145;
+    --terminal-text: 0.88 0.18 145;
+    --dim-text: 0.56 0.03 145;
+    --warn-red: 0.62 0.22 25;
+    --warn-amber: 0.8 0.18 75;
+    --panel-bg: 0.08 0.012 145;
+
+    --chart-1: 0.85 0.22 145;
+    --chart-2: 0.62 0.22 25;
+    --chart-3: 0.8 0.18 75;
+    --chart-4: 0.7 0.18 145;
+    --chart-5: 0.56 0.03 145;
+    --sidebar: 0.07 0.01 145;
+    --sidebar-foreground: 0.88 0.18 145;
+    --sidebar-primary: 0.85 0.22 145;
+    --sidebar-primary-foreground: 0.05 0.01 145;
+    --sidebar-accent: 0.1 0.014 145;
+    --sidebar-accent-foreground: 0.88 0.18 145;
+    --sidebar-border: 0.85 0.22 145;
+    --sidebar-ring: 0.85 0.22 145;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    @apply bg-background text-foreground;
+    font-family: "JetBrains Mono", "Courier New", monospace;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+  }
+
+  ::-webkit-scrollbar {
+    width: 2px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(var(--neon-green) / 0.3);
+  }
+}
+
+@layer utilities {
+  .neon-border {
+    border: 1px solid oklch(var(--neon-green) / 0.7);
+    box-shadow: 0 0 6px oklch(var(--neon-green) / 0.4), inset 0 0 6px
+      oklch(var(--neon-green) / 0.05);
+  }
+  .neon-text {
+    color: oklch(var(--neon-green));
+    text-shadow: 0 0 8px oklch(var(--neon-green) / 0.8);
+  }
+  .neon-text-dim {
+    color: oklch(var(--terminal-text));
+  }
+  .red-glow {
+    color: oklch(var(--warn-red));
+    text-shadow: 0 0 10px oklch(var(--warn-red) / 0.9);
+  }
+  .amber-text {
+    color: oklch(var(--warn-amber));
+  }
+  .panel-bg {
+    background-color: oklch(var(--panel-bg));
+  }
+  .scanline {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      oklch(var(--neon-green) / 0.015) 2px,
+      oklch(var(--neon-green) / 0.015) 4px
+    );
+    pointer-events: none;
+  }
+}
+
+@keyframes flash-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes scroll-status {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes glitch {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-1px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-border {
+  0%,
+  100% {
+    box-shadow: 0 0 6px oklch(0.85 0.22 145 / 0.4), inset 0 0 6px
+      oklch(0.85 0.22 145 / 0.05);
+  }
+  50% {
+    box-shadow: 0 0 14px oklch(0.85 0.22 145 / 0.7), inset 0 0 10px
+      oklch(0.85 0.22 145 / 0.1);
+  }
+}
+
+.flash-overlay {
+  animation: flash-in 2s ease-in-out forwards;
+}
+
+.blink-cursor {
+  animation: blink 1s step-end infinite;
+}
+
+.panel-pulse {
+  animation: pulse-border 3s ease-in-out infinite;
+}
+
+.glitch-text {
+  animation: glitch 0.3s ease-in-out;
+}

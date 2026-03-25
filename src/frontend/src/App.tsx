@@ -1919,7 +1919,7 @@ export default function App() {
                 textTransform: "uppercase",
               }}
             >
-              ■ ■ ■ &nbsp; CYBER_CORE v4.2.0 &nbsp; ■ ■ ■
+              ■ ■ ■ &nbsp; CYBER ATTACK v4.2.0 &nbsp; ■ ■ ■
             </motion.div>
           </motion.div>
         )}

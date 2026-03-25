@@ -1045,6 +1045,11 @@ export default function App() {
   // System alert banner
   const [showBanner, setShowBanner] = useState(false);
 
+  // FBI Warning
+  const [showFBIWarning, setShowFBIWarning] = useState(false);
+
+  // Mic Recording
+  const [showMicRecording, setShowMicRecording] = useState(false);
   // Helper: beep sound
   const playBeep = useCallback(() => {
     try {
@@ -1218,6 +1223,54 @@ export default function App() {
     schedule();
     return () => clearTimeout(timeoutId);
   }, [showLoader, playBeep]);
+
+  // FBI Warning random interval
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(180000, 360000);
+      timeoutId = setTimeout(() => {
+        setShowFBIWarning(true);
+        playBeep();
+        setTimeout(() => setShowFBIWarning(false), 4500);
+        schedule();
+      }, delay);
+    };
+    // First appearance after 40-80s
+    const firstDelay = randInt(40000, 80000);
+    timeoutId = setTimeout(() => {
+      setShowFBIWarning(true);
+      playBeep();
+      setTimeout(() => setShowFBIWarning(false), 4500);
+      schedule();
+    }, firstDelay);
+    return () => clearTimeout(timeoutId);
+  }, [showLoader, playBeep]);
+
+  // Mic Recording random interval
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(30000, 60000);
+      timeoutId = setTimeout(() => {
+        const duration = randInt(8000, 12000);
+        setShowMicRecording(true);
+        setTimeout(() => setShowMicRecording(false), duration);
+        schedule();
+      }, delay);
+    };
+    // First appearance after 20-35s
+    const firstDelay = randInt(20000, 35000);
+    timeoutId = setTimeout(() => {
+      const duration = randInt(8000, 12000);
+      setShowMicRecording(true);
+      setTimeout(() => setShowMicRecording(false), duration);
+      schedule();
+    }, firstDelay);
+    return () => clearTimeout(timeoutId);
+  }, [showLoader]);
 
   const timeStr = time.toTimeString().slice(0, 8);
   const dateStr = time.toLocaleDateString("en-US", {
@@ -2265,6 +2318,242 @@ export default function App() {
             }}
           >
             ⚠ WEBCAM ACCESS BLOCKED — switching to alternate method...
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FBI Warning Screen */}
+      <AnimatePresence>
+        {showFBIWarning && (
+          <motion.div
+            key="fbi-warning"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99999,
+              background: "rgba(0,0,0,0.92)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "'JetBrains Mono', monospace",
+              animation: "fbi-pulse 1s ease-in-out infinite",
+            }}
+          >
+            <div
+              style={{
+                background: "#00008B",
+                border: "6px solid #FFD700",
+                borderRadius: "4px",
+                padding: "32px 40px",
+                maxWidth: "640px",
+                width: "90%",
+                textAlign: "center",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {/* Scanlines overlay */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                  backgroundImage:
+                    "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)",
+                  animation: "scanlines 0.08s linear infinite",
+                  zIndex: 1,
+                }}
+              />
+              <div style={{ position: "relative", zIndex: 2 }}>
+                <div
+                  style={{
+                    color: "#FFD700",
+                    fontSize: "1.1rem",
+                    fontWeight: 900,
+                    letterSpacing: "0.2em",
+                    marginBottom: "8px",
+                  }}
+                >
+                  ⚖ FEDERAL BUREAU OF INVESTIGATION ⚖
+                </div>
+                <div
+                  style={{
+                    background: "#FFD700",
+                    color: "#00008B",
+                    fontSize: "2.2rem",
+                    fontWeight: 900,
+                    letterSpacing: "0.25em",
+                    padding: "8px 20px",
+                    marginBottom: "16px",
+                    display: "inline-block",
+                  }}
+                >
+                  FBI WARNING
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "2px",
+                    background: "#FFD700",
+                    marginBottom: "16px",
+                  }}
+                />
+                <div
+                  style={{
+                    color: "#FF4444",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    marginBottom: "12px",
+                    animation: "blink-warning 0.7s step-end infinite",
+                  }}
+                >
+                  ⚠ THIS DEVICE HAS BEEN FLAGGED ⚠
+                </div>
+                <div
+                  style={{
+                    color: "#CCCCCC",
+                    fontSize: "0.68rem",
+                    letterSpacing: "0.06em",
+                    lineHeight: 1.8,
+                    marginBottom: "16px",
+                  }}
+                >
+                  <div>
+                    Unauthorized network activity detected on this system.
+                  </div>
+                  <div>
+                    All data, keystrokes, and communications are being
+                    monitored.
+                  </div>
+                  <div style={{ marginTop: "8px", color: "#AAAAAA" }}>
+                    CASE NO: FBI-
+                    {(Math.floor(Math.random() * 9000000) + 1000000).toString()}
+                    -{String.fromCharCode(65 + Math.floor(Math.random() * 26))}
+                    {String.fromCharCode(65 + Math.floor(Math.random() * 26))}
+                  </div>
+                  <div style={{ color: "#AAAAAA" }}>
+                    SUSPECT IP: {Math.floor(Math.random() * 255)}.
+                    {Math.floor(Math.random() * 255)}.
+                    {Math.floor(Math.random() * 255)}.
+                    {Math.floor(Math.random() * 255)}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "2px",
+                    background: "#FFD700",
+                    marginBottom: "12px",
+                  }}
+                />
+                <div
+                  style={{
+                    color: "#FF4444",
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  YOU ARE BEING MONITORED — DO NOT ATTEMPT TO CLOSE THIS PAGE
+                </div>
+                <div
+                  style={{
+                    color: "#888",
+                    fontSize: "0.58rem",
+                    marginTop: "10px",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Pursuant to 18 U.S.C. § 2701 — Electronic Communications
+                  Privacy Act
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mic Recording Indicator */}
+      <AnimatePresence>
+        {showMicRecording && (
+          <motion.div
+            key="mic-recording"
+            initial={{ opacity: 0, x: -60 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -60 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              left: "16px",
+              zIndex: 9998,
+              background: "oklch(0.08 0.02 0)",
+              border: "2px solid #FF3333",
+              borderRadius: "6px",
+              padding: "10px 14px",
+              fontFamily: "'JetBrains Mono', monospace",
+              boxShadow: "0 0 20px rgba(255,51,51,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "6px",
+              minWidth: "120px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "1.1rem" }}>🎤</span>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+              >
+                <span
+                  style={{
+                    width: "7px",
+                    height: "7px",
+                    borderRadius: "50%",
+                    background: "#FF3333",
+                    display: "inline-block",
+                    animation: "blink-warning 0.6s step-end infinite",
+                  }}
+                />
+                <span
+                  style={{
+                    color: "#FF3333",
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                  }}
+                >
+                  RECORDING
+                </span>
+              </div>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: "3px",
+                height: "18px",
+              }}
+            >
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: "5px",
+                    background: "#FF3333",
+                    borderRadius: "2px",
+                    height: "4px",
+                    animation: `mic-bar ${0.4 + i * 0.1}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.07}s`,
+                  }}
+                />
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

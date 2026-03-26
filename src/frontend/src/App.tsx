@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 // ─── Fake content pools ───────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ const PANEL_TITLES = [
   "[CODE // FIREWALL_BYPASS]",
   "[NETWORK SCAN]",
   "[PAYLOAD INJECTOR]",
-  "[CRYPTO DECRYPTOR]",
+  "[NETWORK RADAR]",
 ];
 
 const STORAGE_KEY = "hacker_terminal_saved_msgs";
@@ -733,6 +733,905 @@ function HackerLoader() {
   );
 }
 
+// ─── PoliceTrackingPanel (Panel 0) ───────────────────────────────────────────
+
+function PoliceTrackingPanel() {
+  const [blink, setBlink] = React.useState(true);
+  const [dotPos, setDotPos] = React.useState({ x: 50, y: 50 });
+  const [lat, setLat] = React.useState(33.6844);
+  const [lng, setLng] = React.useState(73.0479);
+  const [progress, setProgress] = React.useState(0);
+  const [scanY, setScanY] = React.useState(0);
+
+  React.useEffect(() => {
+    const blinkT = setInterval(() => setBlink((b) => !b), 500);
+    return () => clearInterval(blinkT);
+  }, []);
+
+  React.useEffect(() => {
+    const moveT = setInterval(() => {
+      setDotPos((p) => ({
+        x: Math.max(10, Math.min(90, p.x + (Math.random() - 0.5) * 4)),
+        y: Math.max(10, Math.min(90, p.y + (Math.random() - 0.5) * 4)),
+      }));
+      setLat((v) =>
+        Number.parseFloat((v + (Math.random() - 0.5) * 0.001).toFixed(4)),
+      );
+      setLng((v) =>
+        Number.parseFloat((v + (Math.random() - 0.5) * 0.001).toFixed(4)),
+      );
+    }, 800);
+    return () => clearInterval(moveT);
+  }, []);
+
+  React.useEffect(() => {
+    const progT = setInterval(() => {
+      setProgress((p) => (p >= 100 ? 0 : p + 0.8));
+    }, 60);
+    return () => clearInterval(progT);
+  }, []);
+
+  React.useEffect(() => {
+    const scanT = setInterval(() => {
+      setScanY((y) => (y >= 100 ? 0 : y + 1.5));
+    }, 30);
+    return () => clearInterval(scanT);
+  }, []);
+
+  return (
+    <div
+      className="panel-bg neon-border panel-pulse"
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        fontFamily: "'Courier New', monospace",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: "4px 8px",
+          borderBottom: "1px solid rgba(200,0,0,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            color: "#ff3333",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 1,
+          }}
+        >
+          [POLICE TRACKING]
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            opacity: blink ? 1 : 0,
+            transition: "opacity 0.1s",
+          }}
+        >
+          🚨
+        </span>
+      </div>
+
+      {/* Map area */}
+      <div
+        style={{
+          flex: "0 0 55%",
+          position: "relative",
+          background: "#050a05",
+          overflow: "hidden",
+          borderBottom: "1px solid rgba(200,0,0,0.3)",
+        }}
+      >
+        {/* Grid lines */}
+        <svg
+          width="100%"
+          height="100%"
+          style={{ position: "absolute", inset: 0 }}
+          preserveAspectRatio="none"
+          aria-label="Police tracking map grid"
+          role="img"
+        >
+          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((v) => (
+            <React.Fragment key={v}>
+              <line
+                x1={`${v}%`}
+                y1="0%"
+                x2={`${v}%`}
+                y2="100%"
+                stroke="rgba(0,180,0,0.12)"
+                strokeWidth="0.5"
+              />
+              <line
+                x1="0%"
+                y1={`${v}%`}
+                x2="100%"
+                y2={`${v}%`}
+                stroke="rgba(0,180,0,0.12)"
+                strokeWidth="0.5"
+              />
+            </React.Fragment>
+          ))}
+          {/* Cross-hairs */}
+          <line
+            x1="50%"
+            y1="0%"
+            x2="50%"
+            y2="100%"
+            stroke="rgba(0,180,0,0.2)"
+            strokeWidth="0.8"
+            strokeDasharray="4,4"
+          />
+          <line
+            x1="0%"
+            y1="50%"
+            x2="100%"
+            y2="50%"
+            stroke="rgba(0,180,0,0.2)"
+            strokeWidth="0.8"
+            strokeDasharray="4,4"
+          />
+        </svg>
+
+        {/* Scan line */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: `${scanY}%`,
+            height: "2px",
+            background:
+              "linear-gradient(90deg, transparent, rgba(0,255,100,0.4), transparent)",
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Moving dot */}
+        <div
+          style={{
+            position: "absolute",
+            left: `${dotPos.x}%`,
+            top: `${dotPos.y}%`,
+            transform: "translate(-50%, -50%)",
+            transition: "left 0.7s ease, top 0.7s ease",
+          }}
+        >
+          {/* Pulsing ring */}
+          <div
+            style={{
+              position: "absolute",
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              border: "1.5px solid rgba(255,50,50,0.6)",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              animation: "ping 1.2s ease-out infinite",
+            }}
+          />
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: blink ? "#ff2222" : "#ff6666",
+              boxShadow: "0 0 6px #ff0000, 0 0 12px rgba(255,0,0,0.5)",
+            }}
+          />
+        </div>
+
+        {/* Corner labels */}
+        <span
+          style={{
+            position: "absolute",
+            top: 3,
+            left: 5,
+            color: "rgba(0,200,0,0.5)",
+            fontSize: 9,
+            fontFamily: "monospace",
+          }}
+        >
+          ISL
+        </span>
+        <span
+          style={{
+            position: "absolute",
+            bottom: 3,
+            right: 5,
+            color: "rgba(0,200,0,0.5)",
+            fontSize: 9,
+            fontFamily: "monospace",
+          }}
+        >
+          PKT
+        </span>
+      </div>
+
+      {/* Info rows */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "4px 8px",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ color: "#aaa", fontSize: 10, lineHeight: 1.5 }}>
+          <div>
+            <span style={{ color: "rgba(0,200,0,0.7)" }}>LAT: </span>
+            <span style={{ color: "#ff9900" }}>{lat.toFixed(4)}°N</span>
+          </div>
+          <div>
+            <span style={{ color: "rgba(0,200,0,0.7)" }}>LNG: </span>
+            <span style={{ color: "#ff9900" }}>{lng.toFixed(4)}°E</span>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ margin: "3px 0" }}>
+          <div
+            style={{
+              height: 4,
+              background: "rgba(255,255,255,0.08)",
+              borderRadius: 2,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${progress}%`,
+                background: "linear-gradient(90deg, #cc0000, #ff4444)",
+                borderRadius: 2,
+                transition: "width 0.06s linear",
+                boxShadow: "0 0 6px rgba(255,0,0,0.6)",
+              }}
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            color: blink ? "#ff3333" : "rgba(255,50,50,0.5)",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: 1,
+            textAlign: "center",
+            transition: "color 0.1s",
+          }}
+        >
+          ⚠ LAW ENFORCEMENT NOTIFIED
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── LocationPanel (Panel 1) ──────────────────────────────────────────────────
+
+function LocationPanel() {
+  const [blink, setBlink] = React.useState(true);
+  const [ip, setIp] = React.useState("203.128.24.91");
+  const [lat, setLat] = React.useState(33.7294);
+  const [lng, setLng] = React.useState(73.0931);
+  const [dots, setDots] = React.useState(".");
+  const [signalFrame, setSignalFrame] = React.useState(0);
+
+  const ips = [
+    "203.128.24.91",
+    "182.191.88.14",
+    "39.57.143.20",
+    "115.186.1.99",
+  ];
+
+  React.useEffect(() => {
+    const blinkT = setInterval(() => setBlink((b) => !b), 500);
+    return () => clearInterval(blinkT);
+  }, []);
+
+  React.useEffect(() => {
+    const ipT = setInterval(() => {
+      setIp(ips[Math.floor(Math.random() * ips.length)]);
+    }, 3500);
+    return () => clearInterval(ipT);
+  }, []);
+
+  React.useEffect(() => {
+    const coordT = setInterval(() => {
+      setLat((v) =>
+        Number.parseFloat((v + (Math.random() - 0.5) * 0.0002).toFixed(4)),
+      );
+      setLng((v) =>
+        Number.parseFloat((v + (Math.random() - 0.5) * 0.0002).toFixed(4)),
+      );
+    }, 1000);
+    return () => clearInterval(coordT);
+  }, []);
+
+  React.useEffect(() => {
+    const dotsT = setInterval(() => {
+      setDots((d) => (d.length >= 3 ? "." : `${d}.`));
+    }, 400);
+    return () => clearInterval(dotsT);
+  }, []);
+
+  React.useEffect(() => {
+    const sigT = setInterval(() => {
+      setSignalFrame((f) => (f + 1) % 4);
+    }, 600);
+    return () => clearInterval(sigT);
+  }, []);
+
+  const statusRows = [
+    { label: "GPS", value: "LOCKED", color: "#00ff88" },
+    { label: "CELL", value: "TRIANGULATED", color: "#00ff88" },
+    { label: "IP GEOLOC", value: "CONFIRMED", color: "#00ff88" },
+  ];
+
+  return (
+    <div
+      className="panel-bg neon-border panel-pulse"
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        fontFamily: "'Courier New', monospace",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: "4px 8px",
+          borderBottom: "1px solid rgba(255,150,0,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            color: "#ff9900",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: 1,
+          }}
+        >
+          [LOCATION DATA]
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            opacity: blink ? 1 : 0,
+            transition: "opacity 0.1s",
+          }}
+        >
+          📍
+        </span>
+      </div>
+
+      {/* Data rows */}
+      <div
+        style={{
+          flex: 1,
+          padding: "6px 8px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ fontSize: 10 }}>
+          <span style={{ color: "rgba(0,200,0,0.6)" }}>IP ADDR: </span>
+          <span style={{ color: "#ffcc00" }}>{ip}</span>
+        </div>
+        <div style={{ fontSize: 10 }}>
+          <span style={{ color: "rgba(0,200,0,0.6)" }}>CITY: </span>
+          <span style={{ color: "#fff" }}>Islamabad, PK</span>
+        </div>
+        <div style={{ fontSize: 10 }}>
+          <span style={{ color: "rgba(0,200,0,0.6)" }}>LAT: </span>
+          <span style={{ color: "#ff9900" }}>{lat.toFixed(4)}°N</span>
+          <span style={{ color: "rgba(0,200,0,0.6)", marginLeft: 6 }}>
+            LNG:{" "}
+          </span>
+          <span style={{ color: "#ff9900" }}>{lng.toFixed(4)}°E</span>
+        </div>
+        <div style={{ fontSize: 10 }}>
+          <span style={{ color: "rgba(0,200,0,0.6)" }}>ISP: </span>
+          <span style={{ color: "#ccc" }}>PTCL Broadband</span>
+        </div>
+
+        <div
+          style={{
+            height: 1,
+            background: "rgba(255,150,0,0.2)",
+            margin: "2px 0",
+          }}
+        />
+
+        {statusRows.map((row) => (
+          <div
+            key={row.label}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 10,
+            }}
+          >
+            <span style={{ color: "rgba(0,200,0,0.6)" }}>{row.label}:</span>
+            <span style={{ color: row.color, fontWeight: 700 }}>
+              ■ {row.value}
+            </span>
+          </div>
+        ))}
+
+        <div
+          style={{
+            height: 1,
+            background: "rgba(255,150,0,0.2)",
+            margin: "2px 0",
+          }}
+        />
+
+        {/* Signal bars */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: 3,
+            height: 18,
+          }}
+        >
+          <span
+            style={{ color: "rgba(0,200,0,0.6)", fontSize: 9, marginRight: 4 }}
+          >
+            SIG:
+          </span>
+          {[1, 2, 3, 4].map((bar) => (
+            <div
+              key={bar}
+              style={{
+                width: 6,
+                height: bar * 4,
+                background:
+                  bar <= signalFrame + 1 ? "#00ff88" : "rgba(0,255,136,0.2)",
+                borderRadius: 1,
+                transition: "background 0.3s",
+                boxShadow:
+                  bar <= signalFrame + 1
+                    ? "0 0 4px rgba(0,255,136,0.6)"
+                    : "none",
+              }}
+            />
+          ))}
+          <span style={{ color: "#00ff88", fontSize: 9, marginLeft: 4 }}>
+            STRONG
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          padding: "4px 8px",
+          borderTop: "1px solid rgba(255,50,50,0.3)",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            color: blink ? "#ff3333" : "rgba(255,50,50,0.5)",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: 1,
+            transition: "color 0.1s",
+          }}
+        >
+          ▶ TRANSMITTING TO SERVER{dots}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── GraphicPanel (Network Radar) ────────────────────────────────────────────
+
+interface RadarNode {
+  id: number;
+  angle: number;
+  dist: number;
+  ip: string;
+  status: "SCANNING" | "HACKED" | "SECURE";
+  bornAt: number;
+  lastSweep: number;
+  pulsePhase: number;
+}
+
+function generateFakeIP(): string {
+  const subnets = ["192.168.1", "10.0.0", "172.16.0", "203.45.12", "85.203.44"];
+  const sub = subnets[Math.floor(Math.random() * subnets.length)];
+  return `${sub}.${Math.floor(Math.random() * 254) + 1}`;
+}
+
+function GraphicPanel() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const nodesRef = useRef<RadarNode[]>([]);
+  const sweepAngleRef = useRef<number>(0);
+  const frameRef = useRef<number>(0);
+  const nextIdRef = useRef<number>(0);
+  const statsRef = useRef({ found: 0, compromised: 0, scanning: 0 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const resize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      canvas.width = parent.clientWidth;
+      canvas.height = parent.clientHeight;
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas.parentElement!);
+
+    const SWEEP_SPEED = 0.018;
+    const NODE_LIMIT = 18;
+    const NEON_GREEN = "oklch(0.85 0.22 145)";
+    const NEON_AMBER = "oklch(0.85 0.18 75)";
+    const NEON_RED = "oklch(0.65 0.22 25)";
+
+    function hexColor(oklch: string): string {
+      if (oklch.includes("145")) return "#00ff88";
+      if (oklch.includes("75")) return "#ffb300";
+      return "#ff3333";
+    }
+
+    const GREEN = hexColor(NEON_GREEN);
+    const AMBER = hexColor(NEON_AMBER);
+    const RED = hexColor(NEON_RED);
+
+    function spawnNode(angle: number): void {
+      if (nodesRef.current.length >= NODE_LIMIT) return;
+      const dist = 0.15 + Math.random() * 0.78;
+      const roll = Math.random();
+      const status: RadarNode["status"] =
+        roll < 0.5 ? "SCANNING" : roll < 0.85 ? "HACKED" : "SECURE";
+      nodesRef.current.push({
+        id: nextIdRef.current++,
+        angle,
+        dist,
+        ip: generateFakeIP(),
+        status,
+        bornAt: performance.now(),
+        lastSweep: performance.now(),
+        pulsePhase: Math.random() * Math.PI * 2,
+      });
+      // Occasionally replace old nodes
+      if (nodesRef.current.length > NODE_LIMIT) {
+        nodesRef.current.splice(0, 1);
+      }
+    }
+
+    let lastSpawnAngle = 0;
+
+    function draw(now: number): void {
+      if (!canvas || !ctx) return;
+      const W = canvas.width;
+      const H = canvas.height;
+      if (W === 0 || H === 0) {
+        frameRef.current = requestAnimationFrame(draw);
+        return;
+      }
+
+      const cx = W / 2;
+      const cy = H / 2;
+      const R = Math.min(W, H) * 0.42;
+
+      // Clear
+      ctx.fillStyle = "#000a04";
+      ctx.fillRect(0, 0, W, H);
+
+      // ── Concentric rings ──
+      for (let k = 1; k <= 4; k++) {
+        const r = (R * k) / 4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,255,136,${0.08 + k * 0.04})`;
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+      }
+
+      // ── Cross-hairs ──
+      ctx.strokeStyle = "rgba(0,255,136,0.12)";
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - R, cy);
+      ctx.lineTo(cx + R, cy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - R);
+      ctx.lineTo(cx, cy + R);
+      ctx.stroke();
+
+      // Diagonal guides
+      for (const ang of [Math.PI / 4, (3 * Math.PI) / 4]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R);
+        ctx.lineTo(cx - Math.cos(ang) * R, cy - Math.sin(ang) * R);
+        ctx.stroke();
+      }
+
+      // ── Sweep trail (gradient arc) ──
+      const sa = sweepAngleRef.current;
+      const trailLen = Math.PI * 0.55;
+      // conical gradient not used
+
+      // Draw trail as many thin sectors
+      const steps = 40;
+      for (let s = 0; s < steps; s++) {
+        const frac = s / steps;
+        const alpha = frac * 0.35;
+        const segStart = sa - trailLen * (1 - frac);
+        const segEnd = sa - trailLen * (1 - (s + 1) / steps);
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, R, segStart, segEnd);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(0,255,136,${alpha})`;
+        ctx.fill();
+      }
+
+      // ── Sweep beam line ──
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(sa) * R, cy + Math.sin(sa) * R);
+      ctx.strokeStyle = "rgba(0,255,180,0.95)";
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = GREEN;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // ── Spawn nodes when swept over ──
+      const angleDiff = Math.abs(sa - lastSpawnAngle);
+      if (angleDiff > 0.4 && Math.random() < 0.35) {
+        spawnNode(sa + (Math.random() - 0.5) * 0.3);
+        lastSpawnAngle = sa;
+      }
+
+      // ── Draw nodes ──
+      let found = 0;
+      let compromised = 0;
+      let scanning = 0;
+      for (const node of nodesRef.current) {
+        const nx = cx + Math.cos(node.angle) * node.dist * R;
+        const ny = cy + Math.sin(node.angle) * node.dist * R;
+        const age = (now - node.bornAt) / 1000;
+        const pulse = 0.5 + 0.5 * Math.sin(now * 0.005 + node.pulsePhase);
+
+        let nodeColor = GREEN;
+        if (node.status === "HACKED") {
+          nodeColor = RED;
+          compromised++;
+        } else if (node.status === "SCANNING") {
+          nodeColor = AMBER;
+          scanning++;
+        } else {
+          nodeColor = GREEN;
+        }
+        found++;
+
+        // Connection line from center
+        if (node.status === "HACKED") {
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(nx, ny);
+          ctx.strokeStyle = `rgba(255,51,51,${0.15 + pulse * 0.2})`;
+          ctx.lineWidth = 0.8;
+          ctx.setLineDash([3, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Outer pulse ring
+        const pulseR = 6 + pulse * 8;
+        ctx.beginPath();
+        ctx.arc(nx, ny, pulseR, 0, Math.PI * 2);
+        ctx.strokeStyle = nodeColor
+          .replace(")", `,${0.15 + pulse * 0.2})`)
+          .replace("rgb(", "rgba(")
+          .replace("rgb", "rgba")
+          .replace("#", "rgba(")
+          .replace("00ff88", "0,255,136")
+          .replace("ffb300", "255,179,0")
+          .replace("ff3333", "255,51,51");
+        ctx.lineWidth = 0.7;
+        // Use simple approach
+        if (node.status === "HACKED")
+          ctx.strokeStyle = `rgba(255,51,51,${0.15 + pulse * 0.25})`;
+        else if (node.status === "SCANNING")
+          ctx.strokeStyle = `rgba(255,179,0,${0.15 + pulse * 0.25})`;
+        else ctx.strokeStyle = `rgba(0,255,136,${0.15 + pulse * 0.25})`;
+        ctx.stroke();
+
+        // Node dot
+        const dotR = node.status === "HACKED" ? 4 : 3;
+        ctx.beginPath();
+        ctx.arc(nx, ny, dotR, 0, Math.PI * 2);
+        if (node.status === "HACKED") ctx.fillStyle = RED;
+        else if (node.status === "SCANNING") ctx.fillStyle = AMBER;
+        else ctx.fillStyle = GREEN;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = nodeColor;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // IP label (fade in)
+        const labelAlpha = Math.min(1, age * 1.5);
+        ctx.font = "8px 'Courier New', monospace";
+        ctx.fillStyle =
+          node.status === "HACKED"
+            ? `rgba(255,80,80,${labelAlpha})`
+            : node.status === "SCANNING"
+              ? `rgba(255,179,0,${labelAlpha})`
+              : `rgba(0,255,136,${labelAlpha})`;
+        const labelX = nx + 7;
+        const labelY = ny - 4;
+        ctx.fillText(node.ip, labelX, labelY);
+        ctx.font = "7px 'Courier New', monospace";
+        ctx.fillStyle =
+          node.status === "HACKED"
+            ? `rgba(255,100,100,${labelAlpha * 0.9})`
+            : `rgba(255,200,0,${labelAlpha * 0.9})`;
+        ctx.fillText(
+          node.status === "HACKED"
+            ? "● HACKED"
+            : node.status === "SCANNING"
+              ? "◌ SCANNING"
+              : "✓ SECURE",
+          labelX,
+          labelY + 9,
+        );
+      }
+
+      statsRef.current = { found, compromised, scanning };
+
+      // ── Stats overlay (top-left) ──
+      ctx.font = "bold 9px 'Courier New', monospace";
+      const statsLines = [
+        `TARGETS FOUND : ${found}`,
+        `COMPROMISED   : ${compromised}`,
+        `SCANNING      : ${scanning}`,
+        `SECURE        : ${found - compromised - scanning}`,
+      ];
+      statsLines.forEach((line, idx) => {
+        const y = 14 + idx * 13;
+        const color =
+          idx === 1
+            ? "rgba(255,80,80,0.85)"
+            : idx === 2
+              ? "rgba(255,179,0,0.85)"
+              : "rgba(0,255,136,0.7)";
+        ctx.fillStyle = color;
+        ctx.fillText(line, 8, y);
+      });
+
+      // ── Center dot ──
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = GREEN;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = GREEN;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // ── Degree ticks ──
+      for (let deg = 0; deg < 360; deg += 30) {
+        const rad = (deg * Math.PI) / 180;
+        const inner = R - 5;
+        const outer = R + 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(rad) * inner, cy + Math.sin(rad) * inner);
+        ctx.lineTo(cx + Math.cos(rad) * outer, cy + Math.sin(rad) * outer);
+        ctx.strokeStyle = "rgba(0,255,136,0.4)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Degree label
+        if (deg % 90 === 0) {
+          ctx.font = "8px 'Courier New', monospace";
+          ctx.fillStyle = "rgba(0,255,136,0.5)";
+          ctx.fillText(
+            `${deg}°`,
+            cx + Math.cos(rad) * (R + 10) - 8,
+            cy + Math.sin(rad) * (R + 10) + 3,
+          );
+        }
+      }
+
+      // ── Advance sweep ──
+      sweepAngleRef.current =
+        (sweepAngleRef.current + SWEEP_SPEED) % (Math.PI * 2);
+
+      frameRef.current = requestAnimationFrame(draw);
+    }
+
+    frameRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      ro.disconnect();
+    };
+  }, []);
+
+  return (
+    <div
+      className="flex flex-col panel-bg neon-border panel-pulse"
+      style={{ height: "100%", overflow: "hidden", position: "relative" }}
+    >
+      {/* Panel header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          borderBottom: "1px solid rgba(0,255,136,0.25)",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            color: "var(--neon)",
+            fontSize: "10px",
+            fontWeight: "bold",
+            letterSpacing: "1px",
+          }}
+        >
+          [NETWORK RADAR]
+        </span>
+        <span
+          style={{
+            marginLeft: "auto",
+            fontSize: "8px",
+            color: "var(--amber)",
+            animation: "blink 1s step-start infinite",
+          }}
+        >
+          ● LIVE
+        </span>
+      </div>
+      {/* Canvas fills remaining space */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        <canvas
+          ref={canvasRef}
+          data-ocid="radar.canvas_target"
+          style={{ display: "block", width: "100%", height: "100%" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── TermPanel ────────────────────────────────────────────────────────────────
 
 const MAX_LINES = 60;
@@ -879,6 +1778,1048 @@ function TermPanel({
   );
 }
 
+// ─── PoliceTrackingOverlay ────────────────────────────────────────────────────
+
+function PoliceTrackingOverlay({ onClose }: { onClose: () => void }) {
+  const [blink, setBlink] = React.useState(true);
+  const [progress, setProgress] = React.useState(0);
+  const [dotPos, setDotPos] = React.useState({ x: 50, y: 50 });
+  const [lat, setLat] = React.useState(33.6844);
+  const [lng, setLng] = React.useState(73.0479);
+  const [phase, setPhase] = React.useState<"tracking" | "uploaded">("tracking");
+
+  React.useEffect(() => {
+    const blinkT = setInterval(() => setBlink((b) => !b), 500);
+    return () => clearInterval(blinkT);
+  }, []);
+
+  React.useEffect(() => {
+    const moveT = setInterval(() => {
+      setDotPos((p) => ({
+        x: Math.max(10, Math.min(90, p.x + (Math.random() - 0.5) * 3)),
+        y: Math.max(10, Math.min(90, p.y + (Math.random() - 0.5) * 3)),
+      }));
+      setLat((v) =>
+        Number.parseFloat((v + (Math.random() - 0.5) * 0.001).toFixed(4)),
+      );
+      setLng((v) =>
+        Number.parseFloat((v + (Math.random() - 0.5) * 0.001).toFixed(4)),
+      );
+    }, 800);
+    return () => clearInterval(moveT);
+  }, []);
+
+  React.useEffect(() => {
+    const progT = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 100) {
+          clearInterval(progT);
+          setPhase("uploaded");
+          setTimeout(onClose, 3000);
+          return 100;
+        }
+        return p + 1.2;
+      });
+    }, 80);
+    return () => clearInterval(progT);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9998,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.88)",
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.85, y: 40 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        style={{
+          width: "min(660px, 96vw)",
+          background: "#0d0d0d",
+          border: "2px solid #cc0000",
+          borderRadius: 4,
+          boxShadow: "0 0 40px rgba(200,0,0,0.4), 0 8px 40px rgba(0,0,0,0.9)",
+          fontFamily: "Segoe UI, Arial, sans-serif",
+          overflow: "hidden",
+        }}
+      >
+        {/* Title bar */}
+        <div
+          style={{
+            background: "#8b0000",
+            padding: "6px 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 14 }}>🚨</span>
+            <span
+              style={{
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: 1,
+              }}
+            >
+              POLICE TRACKING SYSTEM — LAW ENFORCEMENT ACTIVE
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {["─", "□", "✕"].map((sym, i) => (
+              <div
+                key={sym}
+                style={{
+                  width: 20,
+                  height: 20,
+                  background: i === 2 ? "#c42b1c" : "rgba(255,255,255,0.1)",
+                  borderRadius: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ccc",
+                  fontSize: 10,
+                  cursor: "default",
+                }}
+              >
+                {sym}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding: "20px 24px 24px" }}>
+          {phase === "tracking" ? (
+            <>
+              <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+                {/* Fake Map Grid */}
+                <div
+                  style={{
+                    position: "relative",
+                    width: 220,
+                    height: 180,
+                    background: "#0a1a0a",
+                    border: "1px solid #1a3a1a",
+                    borderRadius: 4,
+                    flexShrink: 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* Grid lines */}
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div
+                      key={`h${i}`}
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        top: `${i * 25}%`,
+                        borderTop: "1px solid rgba(0,255,0,0.1)",
+                      }}
+                    />
+                  ))}
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div
+                      key={`v${i}`}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        bottom: 0,
+                        left: `${i * 25}%`,
+                        borderLeft: "1px solid rgba(0,255,0,0.1)",
+                      }}
+                    />
+                  ))}
+                  {/* Scan line */}
+                  <motion.div
+                    animate={{ top: ["0%", "100%"] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: "linear",
+                    }}
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      height: 2,
+                      background: "rgba(0,255,0,0.3)",
+                    }}
+                  />
+                  {/* Blinking red dot */}
+                  <motion.div
+                    animate={{ opacity: blink ? 1 : 0 }}
+                    style={{
+                      position: "absolute",
+                      left: `${dotPos.x}%`,
+                      top: `${dotPos.y}%`,
+                      transform: "translate(-50%,-50%)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: "50%",
+                        background: "#ff0000",
+                        boxShadow: "0 0 8px #ff0000, 0 0 16px #ff000080",
+                      }}
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 2.5], opacity: [0.6, 0] }}
+                      transition={{
+                        duration: 1.2,
+                        repeat: Number.POSITIVE_INFINITY,
+                      }}
+                      style={{
+                        position: "absolute",
+                        inset: -6,
+                        borderRadius: "50%",
+                        border: "2px solid #ff0000",
+                      }}
+                    />
+                  </motion.div>
+                  {/* Corner labels */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 4,
+                      left: 6,
+                      color: "#00ff0066",
+                      fontSize: 8,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    ISL
+                  </div>
+                  <div
+                    style={{
+                      position: "absolute",
+                      bottom: 4,
+                      right: 6,
+                      color: "#00ff0066",
+                      fontSize: 8,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    PKT
+                  </div>
+                </div>
+
+                {/* Info panel */}
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      color: blink ? "#ff3333" : "#cc0000",
+                      fontWeight: 700,
+                      fontSize: 15,
+                      letterSpacing: 1,
+                      transition: "color 0.3s",
+                    }}
+                  >
+                    🔴 LOCATION ACQUIRED
+                  </div>
+                  <div style={{ color: "#888", fontSize: 11 }}>
+                    TRACKING TARGET — DEVICE ID:{" "}
+                    {`DEV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`}
+                  </div>
+                  {[
+                    ["LAT", `${lat.toFixed(4)}° N`],
+                    ["LONG", `${lng.toFixed(4)}° E`],
+                    ["CITY", "Rawalpindi, Punjab"],
+                    ["ISP", "PTCL Broadband"],
+                    ["IP", "119.153.42.87"],
+                    ["STATUS", "UPLOADING TO AUTHORITIES"],
+                  ].map(([k, v]) => (
+                    <div
+                      key={k}
+                      style={{ display: "flex", gap: 8, fontSize: 11 }}
+                    >
+                      <span style={{ color: "#666", minWidth: 60 }}>{k}:</span>
+                      <span
+                        style={{
+                          color: k === "STATUS" ? "#ff4444" : "#00cc44",
+                          fontFamily: "monospace",
+                          fontWeight: k === "STATUS" ? 700 : 400,
+                        }}
+                      >
+                        {v}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ marginBottom: 12 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 4,
+                  }}
+                >
+                  <span style={{ color: "#aaa", fontSize: 11 }}>
+                    UPLOADING LOCATION TO AUTHORITIES
+                  </span>
+                  <span
+                    style={{ color: "#ff4444", fontSize: 11, fontWeight: 700 }}
+                  >
+                    {Math.round(progress)}%
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 6,
+                    background: "#1a1a1a",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  <motion.div
+                    style={{
+                      height: "100%",
+                      background: "linear-gradient(90deg, #cc0000, #ff4444)",
+                      borderRadius: 3,
+                      width: `${progress}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: "#1a0000",
+                  border: "1px solid #440000",
+                  borderRadius: 4,
+                  padding: "10px 14px",
+                }}
+              >
+                <div
+                  style={{ color: "#ff4444", fontSize: 12, fontWeight: 600 }}
+                >
+                  ⚠ Law enforcement has been notified. Do not close this window.
+                </div>
+                <div style={{ color: "#888", fontSize: 11, marginTop: 4 }}>
+                  Your device location is being transmitted to the nearest
+                  Cybercrime Unit.
+                </div>
+              </div>
+            </>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              style={{ textAlign: "center", padding: "30px 0" }}
+            >
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🚨</div>
+              <div
+                style={{
+                  color: "#ff3333",
+                  fontSize: 20,
+                  fontWeight: 700,
+                  letterSpacing: 2,
+                  marginBottom: 8,
+                }}
+              >
+                LOCATION TRANSMITTED
+              </div>
+              <div style={{ color: "#888", fontSize: 12 }}>
+                Authorities have received your location data.
+                <br />
+                Case #PKT-{Math.floor(Math.random() * 900000 + 100000)} has been
+                opened.
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── CountdownOverlay ──────────────────────────────────────────────────────────
+
+function CountdownOverlay({ onClose }: { onClose: () => void }) {
+  const [seconds, setSeconds] = React.useState(60);
+  const [phase, setPhase] = React.useState<
+    "counting" | "denied" | "compromised"
+  >("counting");
+  const [blink, setBlink] = React.useState(true);
+
+  React.useEffect(() => {
+    const blinkT = setInterval(() => setBlink((b) => !b), 500);
+    return () => clearInterval(blinkT);
+  }, []);
+
+  React.useEffect(() => {
+    if (phase !== "counting") return;
+    const t = setInterval(() => {
+      setSeconds((s) => {
+        if (s <= 1) {
+          clearInterval(t);
+          setPhase("compromised");
+          setTimeout(onClose, 2500);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [phase, onClose]);
+
+  const handleCancel = () => {
+    setPhase("denied");
+    setTimeout(onClose, 2000);
+  };
+
+  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const ss = String(seconds % 60).padStart(2, "0");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9997,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background:
+          phase === "denied"
+            ? "rgba(120,0,0,0.95)"
+            : phase === "compromised"
+              ? "rgba(200,0,0,0.95)"
+              : "rgba(0,0,0,0.92)",
+        backdropFilter: "blur(6px)",
+        transition: "background 0.3s",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 280, damping: 22 }}
+        style={{
+          width: "min(520px, 94vw)",
+          background: "#0a0000",
+          border: "2px solid #cc0000",
+          borderRadius: 6,
+          boxShadow: "0 0 60px rgba(200,0,0,0.6), 0 0 120px rgba(200,0,0,0.2)",
+          fontFamily: "'JetBrains Mono', monospace",
+          textAlign: "center",
+          padding: "40px 32px 36px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* Background pulse */}
+        <motion.div
+          animate={{ opacity: [0.03, 0.08, 0.03] }}
+          transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "#ff0000",
+            pointerEvents: "none",
+          }}
+        />
+
+        {phase === "counting" && (
+          <>
+            <div
+              style={{
+                color: blink ? "#ff4444" : "#cc2222",
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: 3,
+                marginBottom: 24,
+                transition: "color 0.3s",
+              }}
+            >
+              ⚠ SYSTEM BREACH DETECTED ⚠
+            </div>
+            <div
+              style={{
+                color: "#888",
+                fontSize: 12,
+                letterSpacing: 2,
+                marginBottom: 12,
+              }}
+            >
+              INITIATING REMOTE WIPE IN:
+            </div>
+            <motion.div
+              animate={{ scale: blink ? 1 : 0.97 }}
+              transition={{ duration: 0.5 }}
+              style={{
+                fontSize: "clamp(72px, 18vw, 100px)",
+                fontWeight: 900,
+                color: seconds <= 10 ? "#ff2222" : "#ff4444",
+                lineHeight: 1,
+                letterSpacing: 4,
+                textShadow: "0 0 30px rgba(255,50,50,0.8)",
+                marginBottom: 20,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {mm}:{ss}
+            </motion.div>
+            <div
+              style={{
+                color: "#666",
+                fontSize: 11,
+                letterSpacing: 1,
+                marginBottom: 28,
+              }}
+            >
+              All files will be encrypted and transmitted to remote server
+            </div>
+            <button
+              type="button"
+              onClick={handleCancel}
+              data-ocid="countdown.cancel_button"
+              style={{
+                background: "transparent",
+                border: "1px solid #444",
+                color: "#666",
+                padding: "8px 24px",
+                fontSize: 11,
+                letterSpacing: 2,
+                cursor: "pointer",
+                borderRadius: 3,
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              CANCEL WIPE
+            </button>
+          </>
+        )}
+
+        {phase === "denied" && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
+            <div
+              style={{
+                color: "#ff3333",
+                fontSize: 22,
+                fontWeight: 700,
+                letterSpacing: 3,
+              }}
+            >
+              ACCESS DENIED
+            </div>
+            <div style={{ color: "#888", fontSize: 12, marginTop: 10 }}>
+              Cancellation request blocked by remote administrator
+            </div>
+          </motion.div>
+        )}
+
+        {phase === "compromised" && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 16 }}>💀</div>
+            <div
+              style={{
+                color: "#ff2222",
+                fontSize: 22,
+                fontWeight: 700,
+                letterSpacing: 3,
+              }}
+            >
+              SYSTEM COMPROMISED
+            </div>
+            <div style={{ color: "#888", fontSize: 12, marginTop: 10 }}>
+              Remote wipe initiated. All data has been transmitted.
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── VirusScanOverlay ─────────────────────────────────────────────────────────
+
+function VirusScanOverlay({
+  phase,
+  progress,
+  files,
+  threatCount,
+  filesScanned,
+  onClose,
+}: {
+  phase: "scanning" | "results";
+  progress: number;
+  files: string[];
+  threatCount: number;
+  filesScanned: number;
+  onClose: () => void;
+}) {
+  const [blink, setBlink] = React.useState(true);
+  React.useEffect(() => {
+    const t = setInterval(() => setBlink((b) => !b), 600);
+    return () => clearInterval(t);
+  }, []);
+
+  const threats = [
+    {
+      level: "🔴 CRITICAL",
+      name: "Trojan.Stealer.BankInfo",
+      path: "C:\\Users\\Admin\\AppData\\Roaming\\BankVault\\data.bin",
+    },
+    {
+      level: "🔴 CRITICAL",
+      name: "Spyware.KeyLogger.Pro",
+      path: "C:\\Windows\\Temp\\kl32_svc.exe",
+    },
+    {
+      level: "🟡 WARNING",
+      name: "Adware.Browser.Hijack",
+      path: "C:\\Program Files\\SearchProtect\\bin\\CltMngSvc.exe",
+    },
+    {
+      level: "🔴 CRITICAL",
+      name: "Ransomware.WannaCry.Variant",
+      path: "C:\\Users\\Admin\\Documents\\@WannaDecryptor.exe",
+    },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.85)",
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.85, y: 40 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        style={{
+          width: "min(680px, 96vw)",
+          background: "#1a1a2e",
+          border: "1px solid #444",
+          borderRadius: 4,
+          boxShadow:
+            "0 8px 40px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06)",
+          fontFamily: "Segoe UI, Arial, sans-serif",
+          overflow: "hidden",
+        }}
+      >
+        {/* Title bar */}
+        <div
+          style={{
+            background: phase === "results" ? "#8b0000" : "#1e3a5f",
+            padding: "6px 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 14 }}>🛡️</span>
+            <span style={{ color: "#e0e0e0", fontSize: 12, fontWeight: 600 }}>
+              Windows Defender — Threat Protection
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {["─", "□", "✕"].map((sym, i) => (
+              <div
+                key={sym}
+                style={{
+                  width: 20,
+                  height: 20,
+                  background: i === 2 ? "#c42b1c" : "rgba(255,255,255,0.1)",
+                  borderRadius: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ccc",
+                  fontSize: 10,
+                  cursor: "default",
+                }}
+              >
+                {sym}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "20px 24px 24px" }}>
+          {phase === "scanning" ? (
+            <>
+              {/* Header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 14,
+                  marginBottom: 20,
+                }}
+              >
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    background: "rgba(220,30,30,0.15)",
+                    border: "2px solid #cc2222",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 24,
+                    flexShrink: 0,
+                  }}
+                >
+                  ⚠️
+                </div>
+                <div>
+                  <div
+                    style={{
+                      color: blink ? "#ff4444" : "#cc2222",
+                      fontSize: 16,
+                      fontWeight: 700,
+                      letterSpacing: 0.5,
+                      transition: "color 0.3s",
+                    }}
+                  >
+                    ⚠ THREAT DETECTED — SCANNING IN PROGRESS
+                  </div>
+                  <div style={{ color: "#aaa", fontSize: 12, marginTop: 3 }}>
+                    Windows Defender is scanning your system for malicious
+                    software
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                  }}
+                >
+                  <span style={{ color: "#ccc", fontSize: 12 }}>
+                    Scan Progress
+                  </span>
+                  <span
+                    style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}
+                  >
+                    {progress}%
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 8,
+                    background: "#0d0d1a",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                    border: "1px solid #333",
+                  }}
+                >
+                  <motion.div
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                      height: "100%",
+                      background: "linear-gradient(90deg, #1a6ecc, #3a9bff)",
+                      borderRadius: 4,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Live counters */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 10,
+                  marginBottom: 16,
+                }}
+              >
+                {[
+                  {
+                    label: "Files Scanned",
+                    value: filesScanned.toLocaleString(),
+                    color: "#7ecfff",
+                  },
+                  {
+                    label: "Threats Found",
+                    value: threatCount.toString(),
+                    color: threatCount > 0 ? "#ff6666" : "#66ff88",
+                  },
+                  {
+                    label: "Critical",
+                    value:
+                      threatCount > 1
+                        ? Math.max(0, threatCount - 1).toString()
+                        : "0",
+                    color: threatCount > 1 ? "#ff3333" : "#888",
+                  },
+                ].map(({ label, value, color }) => (
+                  <div
+                    key={label}
+                    style={{
+                      background: "#0f0f1e",
+                      border: "1px solid #2a2a3e",
+                      borderRadius: 4,
+                      padding: "8px 12px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color,
+                        fontSize: 22,
+                        fontWeight: 700,
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {value}
+                    </div>
+                    <div style={{ color: "#888", fontSize: 11 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Scrolling files */}
+              <div
+                style={{
+                  background: "#0a0a16",
+                  border: "1px solid #1e1e30",
+                  borderRadius: 4,
+                  padding: "10px 12px",
+                  height: 130,
+                  overflow: "hidden",
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ color: "#555", fontSize: 10, marginBottom: 6 }}>
+                  SCANNING FILES:
+                </div>
+                {files.map((f, i) => (
+                  <div
+                    // biome-ignore lint/suspicious/noArrayIndexKey: order matters for animation
+                    key={`file-${i}`}
+                    style={{
+                      color: i === files.length - 1 ? "#7ecfff" : "#4a5568",
+                      fontSize: 11,
+                      fontFamily: "Consolas, monospace",
+                      marginBottom: 3,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {i === files.length - 1 && (
+                      <span style={{ color: "#3a9bff" }}>▶ </span>
+                    )}
+                    {f}
+                  </div>
+                ))}
+              </div>
+
+              {/* Status bar */}
+              <div
+                style={{
+                  background: "#0d1117",
+                  border: "1px solid #2d3748",
+                  borderRadius: 4,
+                  padding: "10px 14px",
+                  textAlign: "center",
+                  color: blink ? "#ffcc00" : "#cc9900",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                }}
+              >
+                SCANNING YOUR SYSTEM... DO NOT TURN OFF YOUR COMPUTER
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Results header */}
+              <div style={{ textAlign: "center", marginBottom: 20 }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>🚨</div>
+                <div
+                  style={{
+                    color: blink ? "#ff2222" : "#cc0000",
+                    fontSize: 20,
+                    fontWeight: 800,
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                    transition: "color 0.3s",
+                  }}
+                >
+                  ⚠ YOUR COMPUTER IS AT RISK!
+                </div>
+                <div style={{ color: "#ff8888", fontSize: 13, marginTop: 6 }}>
+                  3 critical threats found. Your personal data may be
+                  compromised.
+                </div>
+              </div>
+
+              {/* Threat list */}
+              <div style={{ marginBottom: 20 }}>
+                {threats.map((t) => (
+                  <div
+                    key={t.name}
+                    style={{
+                      background: "#0f0f1e",
+                      border: `1px solid ${t.level.includes("CRITICAL") ? "#5a1a1a" : "#4a3a00"}`,
+                      borderRadius: 4,
+                      padding: "10px 14px",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 4,
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontSize: 12 }}>
+                          {t.level.split(" ")[0]}{" "}
+                        </span>
+                        <span
+                          style={{
+                            color: t.level.includes("CRITICAL")
+                              ? "#ff4444"
+                              : "#ffcc00",
+                            fontWeight: 700,
+                            fontSize: 13,
+                          }}
+                        >
+                          {t.level.replace(/^[^ ]+ /, "")}:
+                        </span>
+                        <span
+                          style={{
+                            color: "#e0e0e0",
+                            fontWeight: 600,
+                            fontSize: 13,
+                            marginLeft: 6,
+                          }}
+                        >
+                          {t.name}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        color: "#666",
+                        fontSize: 11,
+                        fontFamily: "Consolas, monospace",
+                        marginTop: 4,
+                      }}
+                    >
+                      {t.path}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action buttons */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <button
+                  type="button"
+                  data-ocid="virusscan.confirm_button"
+                  onClick={onClose}
+                  style={{
+                    padding: "12px",
+                    background: "#cc2222",
+                    border: "none",
+                    borderRadius: 4,
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  🗑 REMOVE ALL THREATS
+                </button>
+                <button
+                  type="button"
+                  data-ocid="virusscan.secondary_button"
+                  onClick={onClose}
+                  style={{
+                    padding: "12px",
+                    background: "#1a5fa8",
+                    border: "none",
+                    borderRadius: 4,
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  🛡 ACTIVATE FULL PROTECTION
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -902,7 +2843,34 @@ export default function App() {
 
   // Hide loader after 6.5s
   useEffect(() => {
-    const t = setTimeout(() => setShowLoader(false), 6500);
+    const t = setTimeout(() => {
+      setShowLoader(false);
+      setTimeout(() => {
+        // Step 1: FBI Warning
+        setShowFBIWarning(true);
+        playBeep();
+        setTimeout(() => {
+          setShowFBIWarning(false);
+          // Step 2: Police Tracking (immediately after FBI)
+          setTimeout(() => {
+            policeCloseCallbackRef.current = () => {
+              policeCloseCallbackRef.current = null;
+              // Step 3: Location notification after police tracking closes
+              setTimeout(() => {
+                addScaryPopupRef.current?.(
+                  "Location transmitted",
+                  "City: Karachi, PK | Coords: 24.8607° N, 67.0011° E",
+                  "top-right",
+                  "Maps",
+                  "🟦",
+                );
+              }, 500);
+            };
+            setShowPoliceTracking(true);
+          }, 400);
+        }, 4500);
+      }, 500);
+    }, 6500);
     return () => clearTimeout(t);
   }, []);
 
@@ -1032,6 +3000,8 @@ export default function App() {
       title: string;
       detail: string;
       position: "top-right" | "bottom-right";
+      app?: string;
+      icon?: string;
     }[]
   >([]);
   const popupIdRef = useRef(0);
@@ -1048,8 +3018,41 @@ export default function App() {
   // FBI Warning
   const [showFBIWarning, setShowFBIWarning] = useState(false);
 
+  // Virus Scan
+  const [showVirusScan, setShowVirusScan] = useState<
+    "scanning" | "results" | null
+  >(null);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanFiles, setScanFiles] = useState<string[]>([]);
+  const [threatCount, setThreatCount] = useState(0);
+  const [filesScanned, setFilesScanned] = useState(0);
+
   // Mic Recording
   const [showMicRecording, setShowMicRecording] = useState(false);
+  // Screenshot capture state
+  const [screenshotData, setScreenshotData] = useState<string | null>(null);
+  const [screenshotPhase, setScreenshotPhase] = useState<
+    "capture" | "upload" | null
+  >(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadBytes, setUploadBytes] = useState(0);
+  // Police Tracking Map
+  const [showPoliceTracking, setShowPoliceTracking] = useState(false);
+  const policeCloseCallbackRef = React.useRef<(() => void) | null>(null);
+  const addScaryPopupRef = React.useRef<
+    | ((
+        title: string,
+        detail: string,
+        position: "top-right" | "bottom-right",
+        app?: string,
+        icon?: string,
+      ) => void)
+    | null
+  >(null);
+
+  // Countdown Timer (System Shutdown)
+  const [showCountdown, setShowCountdown] = useState(false);
+
   // Helper: beep sound
   const playBeep = useCallback(() => {
     try {
@@ -1070,17 +3073,103 @@ export default function App() {
 
   // Helper: add scary popup
   const addScaryPopup = useCallback(
-    (title: string, detail: string, position: "top-right" | "bottom-right") => {
+    (
+      title: string,
+      detail: string,
+      position: "top-right" | "bottom-right",
+      app?: string,
+      icon?: string,
+    ) => {
       const id = ++popupIdRef.current;
-      setScaryPopups((prev) => [...prev, { id, title, detail, position }]);
+      setScaryPopups((prev) => [
+        ...prev,
+        { id, title, detail, position, app, icon },
+      ]);
       playBeep();
       setTimeout(
         () => setScaryPopups((prev) => prev.filter((p) => p.id !== id)),
-        3800,
+        4200,
       );
     },
     [playBeep],
   );
+
+  addScaryPopupRef.current = addScaryPopup;
+
+  // Screenshot capture sequence
+  const triggerScreenshotCapture = useCallback(async () => {
+    try {
+      // Simulate screenshot using native canvas
+      const canvas = document.createElement("canvas");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const ctx2 = canvas.getContext("2d")!;
+      ctx2.fillStyle = "#000a04";
+      ctx2.fillRect(0, 0, canvas.width, canvas.height);
+      ctx2.strokeStyle = "rgba(0,255,136,0.08)";
+      ctx2.lineWidth = 1;
+      for (let gy = 0; gy < canvas.height; gy += 20) {
+        ctx2.beginPath();
+        ctx2.moveTo(0, gy);
+        ctx2.lineTo(canvas.width, gy);
+        ctx2.stroke();
+      }
+      ctx2.fillStyle = "#00ff88";
+      ctx2.font = "12px monospace";
+      [
+        "[SYSTEM ACCESS GRANTED]",
+        "$ nmap -sS 192.168.1.0/24",
+        "Scanning...",
+        "Host: 192.168.1.5 OPEN",
+        "HOST COMPROMISED",
+        "PASSWORD EXTRACTED: ****",
+        "UPLOADING DATA...",
+      ].forEach((line, i) => {
+        ctx2.fillText(line, 20, 40 + i * 22);
+      });
+      ctx2.fillStyle = "#ff3333";
+      ctx2.font = "bold 16px monospace";
+      ctx2.fillText(
+        "⚠ CYBER ATTACK IN PROGRESS",
+        canvas.width / 2 - 160,
+        canvas.height / 2,
+      );
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      setScreenshotData(dataUrl);
+      setScreenshotPhase("capture");
+      setUploadProgress(0);
+      setUploadBytes(0);
+      playBeep();
+      setTimeout(() => {
+        setScreenshotPhase("upload");
+        const totalBytes = 1258291; // ~1.2MB
+        const duration = 3000;
+        const steps = 60;
+        let step = 0;
+        const interval = setInterval(() => {
+          step++;
+          const progress = Math.min(100, Math.round((step / steps) * 100));
+          const bytes = Math.round((progress / 100) * totalBytes);
+          setUploadProgress(progress);
+          setUploadBytes(bytes);
+          if (step >= steps) {
+            clearInterval(interval);
+            setTimeout(() => {
+              setScreenshotData(null);
+              setScreenshotPhase(null);
+            }, 1500);
+          }
+        }, duration / steps);
+      }, 2500);
+    } catch {
+      // fallback: just show normal popup
+      addScaryPopup(
+        "📸 SCREENSHOT CAPTURED",
+        "Uploaded to remote server 185.220.101.47",
+        "top-right",
+      );
+    }
+  }, [playBeep, addScaryPopup]);
 
   // Camera effect (once, after ~12s)
   useEffect(() => {
@@ -1128,29 +3217,46 @@ export default function App() {
   // Scary popup random interval
   const SCARY_ALERTS = [
     {
-      title: "📸 SCREENSHOT CAPTURED",
+      title: "Screenshot saved",
       detail: "Uploaded to remote server 185.220.101.47",
+      app: "Security Alert",
+      icon: "🟥",
     },
     {
-      title: "📍 LOCATION ACQUIRED",
+      title: "Location acquired",
       detail: "City: Karachi, PK | Coords: 24.8607° N, 67.0011° E",
+      app: "Maps",
+      icon: "🟦",
     },
     {
-      title: "🎤 MICROPHONE ACCESSED",
-      detail: "Audio stream active — recording...",
+      title: "Microphone accessed",
+      detail: "Audio stream active — recording in background",
+      app: "System",
+      icon: "🟪",
     },
     {
-      title: "📋 CLIPBOARD STOLEN",
-      detail: "Contents copied to attacker buffer",
+      title: "Clipboard contents copied",
+      detail: "Contents copied to remote attacker buffer",
+      app: "Clipboard",
+      icon: "🟨",
     },
     {
-      title: "🔑 PASSWORDS EXTRACTED",
+      title: "Passwords extracted",
       detail: "12 credentials found in browser keychain",
+      app: "Credential Manager",
+      icon: "🔴",
     },
-    { title: "📱 CONTACTS UPLOADED", detail: "847 contacts sent to C2 server" },
     {
-      title: "🌐 BROWSER HISTORY EXFILTRATED",
-      detail: "Last 30 days — 1,247 entries",
+      title: "Contacts uploaded",
+      detail: "847 contacts sent to C2 server",
+      app: "Contacts",
+      icon: "🟢",
+    },
+    {
+      title: "Browser history exfiltrated",
+      detail: "Last 30 days — 1,247 entries exported",
+      app: "Microsoft Edge",
+      icon: "🔵",
     },
   ];
 
@@ -1161,18 +3267,24 @@ export default function App() {
       const delay = randInt(8000, 20000);
       timeoutId = setTimeout(() => {
         const alert = randItem(SCARY_ALERTS);
-        const position = Math.random() > 0.5 ? "top-right" : "bottom-right";
-        addScaryPopup(
-          alert.title,
-          alert.detail,
-          position as "top-right" | "bottom-right",
-        );
+        if (alert.title === "📸 SCREENSHOT CAPTURED") {
+          triggerScreenshotCapture();
+        } else {
+          const position = Math.random() > 0.5 ? "top-right" : "bottom-right";
+          addScaryPopup(
+            alert.title,
+            alert.detail,
+            position as "top-right" | "bottom-right",
+            alert.app,
+            alert.icon,
+          );
+        }
         schedule();
       }, delay);
     };
     schedule();
     return () => clearTimeout(timeoutId);
-  }, [showLoader, addScaryPopup]);
+  }, [showLoader, addScaryPopup, triggerScreenshotCapture]);
 
   // Screen shake random interval
   useEffect(() => {
@@ -1224,7 +3336,7 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [showLoader, playBeep]);
 
-  // FBI Warning random interval
+  // FBI Warning random interval (first appearance handled by loader effect)
   useEffect(() => {
     if (showLoader) return;
     let timeoutId: ReturnType<typeof setTimeout>;
@@ -1237,14 +3349,7 @@ export default function App() {
         schedule();
       }, delay);
     };
-    // First appearance after 40-80s
-    const firstDelay = randInt(40000, 80000);
-    timeoutId = setTimeout(() => {
-      setShowFBIWarning(true);
-      playBeep();
-      setTimeout(() => setShowFBIWarning(false), 4500);
-      schedule();
-    }, firstDelay);
+    schedule();
     return () => clearTimeout(timeoutId);
   }, [showLoader, playBeep]);
 
@@ -1267,6 +3372,150 @@ export default function App() {
       const duration = randInt(8000, 12000);
       setShowMicRecording(true);
       setTimeout(() => setShowMicRecording(false), duration);
+      schedule();
+    }, firstDelay);
+    return () => clearTimeout(timeoutId);
+  }, [showLoader]);
+
+  // Virus Scan trigger
+  useEffect(() => {
+    if (showLoader) return;
+    let outerTimeout: ReturnType<typeof setTimeout>;
+    const randInt = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const runScan = () => {
+      // Beep on start
+      try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 660;
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.6);
+      } catch (_) {
+        /* ignore */
+      }
+
+      setScanProgress(0);
+      setScanFiles([]);
+      setThreatCount(0);
+      setFilesScanned(0);
+      setShowVirusScan("scanning");
+
+      const fakePaths = [
+        "C:\\Users\\Admin\\Documents\\passwords.txt",
+        "C:\\Windows\\System32\\drivers\\etc\\hosts",
+        "C:\\Users\\Admin\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Login Data",
+        "C:\\Users\\Admin\\Desktop\\bank_details.xlsx",
+        "C:\\Windows\\Temp\\svchost32.exe",
+        "C:\\Users\\Admin\\AppData\\Roaming\\Microsoft\\Wallet",
+        "C:\\Program Files\\Common Files\\System\\Ole DB",
+        "C:\\Users\\Admin\\Documents\\private_keys.pem",
+        "C:\\Windows\\System32\\lsass.exe",
+        "C:\\Users\\Admin\\AppData\\Local\\Temp\\~DF3421.tmp",
+        "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs",
+        "C:\\Users\\Admin\\Downloads\\setup_v2.3.exe",
+        "C:\\Windows\\SysWOW64\\ntdll.dll",
+        "C:\\Users\\Admin\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles",
+        "C:\\Windows\\System32\\config\\SAM",
+        "C:\\Users\\Admin\\Documents\\credit_cards.docx",
+        "C:\\Windows\\Temp\\keylogger_data.dat",
+        "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Credentials",
+        "C:\\Program Files (x86)\\Common Files\\InstallShield",
+        "C:\\Users\\Admin\\Desktop\\recovery_codes.txt",
+      ];
+
+      let pathIdx = 0;
+      let prog = 0;
+      let threats = 0;
+      let scanned = 0;
+      const scanInterval = setInterval(() => {
+        prog = Math.min(100, prog + 100 / 50);
+        scanned += Math.floor(Math.random() * 60) + 20;
+        if (pathIdx < fakePaths.length) {
+          setScanFiles((prev) => {
+            const next = [...prev, fakePaths[pathIdx]];
+            return next.slice(-8);
+          });
+          pathIdx++;
+        }
+        if (prog > 20 && prog < 85 && Math.random() < 0.15) {
+          threats = Math.min(4, threats + 1);
+          setThreatCount(threats);
+        }
+        setScanProgress(Math.round(prog));
+        setFilesScanned(scanned);
+        if (prog >= 100) {
+          clearInterval(scanInterval);
+          setThreatCount(3);
+          setTimeout(() => {
+            setShowVirusScan("results");
+          }, 800);
+        }
+      }, 300);
+
+      // Results auto-close after 8s
+      const closeTimer = setTimeout(
+        () => {
+          setShowVirusScan(null);
+          setScanFiles([]);
+          setScanProgress(0);
+          // Schedule next
+          const nextDelay = randInt(4 * 60000, 7 * 60000);
+          outerTimeout = setTimeout(runScan, nextDelay);
+        },
+        15000 + 8000 + 1000,
+      );
+
+      return () => {
+        clearInterval(scanInterval);
+        clearTimeout(closeTimer);
+      };
+    };
+
+    const firstDelay = randInt(45000, 90000);
+    outerTimeout = setTimeout(runScan, firstDelay);
+    return () => clearTimeout(outerTimeout);
+  }, [showLoader]);
+
+  // Police Tracking Map trigger
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(120000, 180000);
+      timeoutId = setTimeout(() => {
+        setShowPoliceTracking(true);
+        schedule();
+      }, delay);
+    };
+    const firstDelay = randInt(120000, 180000);
+    timeoutId = setTimeout(() => {
+      setShowPoliceTracking(true);
+      schedule();
+    }, firstDelay);
+    return () => clearTimeout(timeoutId);
+  }, [showLoader]);
+
+  // Countdown Timer trigger
+  useEffect(() => {
+    if (showLoader) return;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = randInt(360000, 600000);
+      timeoutId = setTimeout(() => {
+        setShowCountdown(true);
+        schedule();
+      }, delay);
+    };
+    const firstDelay = randInt(90000, 120000);
+    timeoutId = setTimeout(() => {
+      setShowCountdown(true);
       schedule();
     }, firstDelay);
     return () => clearTimeout(timeoutId);
@@ -1470,12 +3719,20 @@ export default function App() {
       >
         {PANEL_TITLES.map((title, i) => (
           <div key={title} style={{ position: "relative", overflow: "hidden" }}>
-            <TermPanel
-              title={title}
-              panelIndex={i}
-              paused={paused}
-              injectLine={injectedLines[i]}
-            />
+            {i === 0 ? (
+              <PoliceTrackingPanel />
+            ) : i === 1 ? (
+              <LocationPanel />
+            ) : i === 5 ? (
+              <GraphicPanel />
+            ) : (
+              <TermPanel
+                title={title}
+                panelIndex={i}
+                paused={paused}
+                injectLine={injectedLines[i]}
+              />
+            )}
           </div>
         ))}
       </main>
@@ -2151,7 +4408,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Scary Popup Notifications */}
+      {/* Scary Popup Notifications — Windows 10/11 Style */}
       <div
         style={{
           position: "fixed",
@@ -2163,65 +4420,101 @@ export default function App() {
         }}
       >
         <AnimatePresence>
-          {scaryPopups.map((popup) => (
+          {scaryPopups.map((popup, index) => (
             <motion.div
               key={popup.id}
-              initial={{ x: 280, opacity: 0 }}
+              initial={{ x: 400, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 280, opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
+              exit={{ x: 400, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               style={{
                 position: "absolute",
                 right: "16px",
-                ...(popup.position === "top-right"
-                  ? { top: "56px" }
-                  : { bottom: "20px" }),
-                width: "260px",
-                background: "oklch(0.1 0.02 25)",
-                border: "1px solid oklch(0.5 0.22 25)",
-                borderRadius: "4px",
-                padding: "10px 12px",
-                boxShadow: "0 0 20px oklch(0.5 0.22 25 / 0.6)",
-                fontFamily: "'JetBrains Mono', monospace",
+                top: `${80 + index * 110}px`,
+                width: "360px",
+                background: "rgba(32, 32, 32, 0.97)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "8px",
+                boxShadow:
+                  "0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)",
+                fontFamily: "-apple-system, 'Segoe UI', system-ui, sans-serif",
                 pointerEvents: "auto",
+                overflow: "hidden",
               }}
             >
+              {/* Header row: icon + app name + time */}
               <div
                 style={{
-                  color: "oklch(0.7 0.22 25)",
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  marginBottom: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 12px 6px 12px",
                 }}
               >
-                {popup.title}
+                <span style={{ fontSize: "14px", lineHeight: 1 }}>
+                  {popup.icon ?? "⚠️"}
+                </span>
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    fontSize: "11px",
+                    fontWeight: 400,
+                    flex: 1,
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  {popup.app ?? "System"}
+                </span>
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.35)",
+                    fontSize: "11px",
+                    fontWeight: 400,
+                  }}
+                >
+                  just now
+                </span>
               </div>
+              {/* Notification body */}
+              <div style={{ padding: "0 12px 10px 12px" }}>
+                <div
+                  style={{
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    lineHeight: 1.3,
+                    marginBottom: "3px",
+                  }}
+                >
+                  {popup.title}
+                </div>
+                <div
+                  style={{
+                    color: "#aaaaaa",
+                    fontSize: "12px",
+                    fontWeight: 400,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {popup.detail}
+                </div>
+              </div>
+              {/* Progress bar — auto dismiss indicator */}
               <div
                 style={{
-                  color: "oklch(0.65 0.1 60)",
-                  fontSize: "0.62rem",
-                  letterSpacing: "0.04em",
-                  lineHeight: 1.5,
-                }}
-              >
-                {popup.detail}
-              </div>
-              <div
-                style={{
-                  marginTop: "6px",
                   width: "100%",
                   height: "2px",
-                  background: "oklch(0.5 0.22 25 / 0.4)",
-                  borderRadius: "1px",
-                  overflow: "hidden",
+                  background: "rgba(255,255,255,0.06)",
                 }}
               >
                 <motion.div
                   initial={{ width: "100%" }}
                   animate={{ width: "0%" }}
-                  transition={{ duration: 3.6, ease: "linear" }}
-                  style={{ height: "100%", background: "oklch(0.6 0.22 25)" }}
+                  transition={{ duration: 4.0, ease: "linear" }}
+                  style={{
+                    height: "100%",
+                    background: "rgba(255,255,255,0.2)",
+                  }}
                 />
               </div>
             </motion.div>
@@ -2554,6 +4847,286 @@ export default function App() {
                 />
               ))}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Virus Scan Overlay ── */}
+      <AnimatePresence>
+        {showVirusScan && (
+          <VirusScanOverlay
+            phase={showVirusScan}
+            progress={scanProgress}
+            files={scanFiles}
+            threatCount={threatCount}
+            filesScanned={filesScanned}
+            onClose={() => setShowVirusScan(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Police Tracking Map Overlay ── */}
+      <AnimatePresence>
+        {showPoliceTracking && (
+          <PoliceTrackingOverlay
+            onClose={() => {
+              setShowPoliceTracking(false);
+              if (policeCloseCallbackRef.current)
+                policeCloseCallbackRef.current();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Countdown Timer Overlay ── */}
+      <AnimatePresence>
+        {showCountdown && (
+          <CountdownOverlay onClose={() => setShowCountdown(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Screenshot Capture Overlay */}
+      <AnimatePresence>
+        {screenshotPhase && screenshotData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 10001,
+              background: "#000",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "monospace",
+            }}
+          >
+            {/* Screenshot image */}
+            <img
+              src={screenshotData}
+              alt="captured"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: screenshotPhase === "upload" ? 0.35 : 0.85,
+                transition: "opacity 0.5s",
+              }}
+            />
+            {/* Scan lines */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,70,0.04) 3px, rgba(0,255,70,0.04) 4px)",
+                pointerEvents: "none",
+              }}
+            />
+            {screenshotPhase === "capture" && (
+              <>
+                {/* Flash effect */}
+                <motion.div
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "#fff",
+                    pointerEvents: "none",
+                  }}
+                />
+                {/* Corner brackets */}
+                {["top-left", "top-right", "bottom-left", "bottom-right"].map(
+                  (corner) => (
+                    <div
+                      key={corner}
+                      style={{
+                        position: "absolute",
+                        [corner.includes("top") ? "top" : "bottom"]: 40,
+                        [corner.includes("left") ? "left" : "right"]: 40,
+                        width: 40,
+                        height: 40,
+                        borderTop: corner.includes("top")
+                          ? "3px solid #00FF46"
+                          : "none",
+                        borderBottom: corner.includes("bottom")
+                          ? "3px solid #00FF46"
+                          : "none",
+                        borderLeft: corner.includes("left")
+                          ? "3px solid #00FF46"
+                          : "none",
+                        borderRight: corner.includes("right")
+                          ? "3px solid #00FF46"
+                          : "none",
+                      }}
+                    />
+                  ),
+                )}
+                {/* REC indicator */}
+                <motion.div
+                  animate={{ opacity: [1, 0, 1] }}
+                  transition={{
+                    repeat: Number.POSITIVE_INFINITY,
+                    duration: 0.8,
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: 20,
+                    right: 20,
+                    color: "#FF3333",
+                    fontSize: 14,
+                    fontWeight: "bold",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: "#FF3333",
+                      display: "inline-block",
+                    }}
+                  />
+                  REC
+                </motion.div>
+                {/* Capturing text */}
+                <motion.div
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1 }}
+                  style={{
+                    position: "absolute",
+                    top: 20,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    color: "#00FF46",
+                    fontSize: 16,
+                    fontWeight: "bold",
+                    letterSpacing: 3,
+                  }}
+                >
+                  ● CAPTURING SCREEN...
+                </motion.div>
+              </>
+            )}
+            {screenshotPhase === "upload" && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                style={{
+                  position: "relative",
+                  background: "rgba(0,0,0,0.92)",
+                  border: "2px solid #00FF46",
+                  borderRadius: 4,
+                  padding: "32px 40px",
+                  width: 440,
+                  maxWidth: "90vw",
+                  textAlign: "center",
+                  boxShadow: "0 0 40px rgba(0,255,70,0.3)",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#FF3333",
+                    fontSize: 13,
+                    letterSpacing: 3,
+                    marginBottom: 8,
+                  }}
+                >
+                  ⚠ SYSTEM BREACH
+                </div>
+                <div
+                  style={{
+                    color: "#00FF46",
+                    fontSize: 18,
+                    fontWeight: "bold",
+                    letterSpacing: 2,
+                    marginBottom: 4,
+                  }}
+                >
+                  UPLOADING TO SERVER
+                </div>
+                <div
+                  style={{
+                    color: "#0af",
+                    fontSize: 14,
+                    marginBottom: 24,
+                    fontFamily: "monospace",
+                  }}
+                >
+                  185.220.101.47:8443
+                </div>
+                {/* Progress bar */}
+                <div
+                  style={{
+                    background: "#111",
+                    border: "1px solid #333",
+                    borderRadius: 2,
+                    height: 12,
+                    marginBottom: 12,
+                    overflow: "hidden",
+                  }}
+                >
+                  <motion.div
+                    style={{
+                      height: "100%",
+                      background: "linear-gradient(90deg, #00FF46, #0af)",
+                      borderRadius: 2,
+                    }}
+                    animate={{ width: `${uploadProgress}%` }}
+                    transition={{ duration: 0.05 }}
+                  />
+                </div>
+                <div
+                  style={{
+                    color: "#aaa",
+                    fontSize: 12,
+                    marginBottom: 16,
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span>{uploadProgress}%</span>
+                  <span>{(uploadBytes / 1024).toFixed(1)} KB / 1,228.8 KB</span>
+                </div>
+                {uploadProgress < 100 ? (
+                  <motion.div
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{
+                      repeat: Number.POSITIVE_INFINITY,
+                      duration: 0.6,
+                    }}
+                    style={{ color: "#00FF46", fontSize: 13, letterSpacing: 2 }}
+                  >
+                    TRANSFERRING DATA...
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    style={{
+                      color: "#00FF46",
+                      fontSize: 14,
+                      fontWeight: "bold",
+                      letterSpacing: 2,
+                    }}
+                  >
+                    ✓ TRANSFER COMPLETE — 1 file sent
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -125,9 +125,6 @@ importers:
       '@tanstack/react-router':
         specifier: ~1.131.8
         version: 1.131.50(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
-      '@types/html2canvas':
-        specifier: ^1.0.0
-        version: 1.0.0
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -1689,10 +1686,6 @@ packages:
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
-
-  '@types/html2canvas@1.0.0':
-    resolution: {integrity: sha512-BJpVf+FIN9UERmzhbtUgpXj6XBZpG67FMgBLLoj9HZKd9XifcCpSV+UnFcwTZfEyun4U/KmCrrVOG7829L589w==}
-    deprecated: This is a stub types definition. html2canvas provides its own type definitions, so you do not need this installed.
 
   '@types/js-cookie@2.2.7':
     resolution: {integrity: sha512-aLkWa0C0vO5b4Sr798E26QgOkss68Un0bLjs7u9qxzPT5CG+8DuNTffWES58YzJs3hrVAOs1wonycqEBqNJubA==}
@@ -4351,10 +4344,6 @@ snapshots:
   '@types/draco3d@1.4.10': {}
 
   '@types/estree@1.0.8': {}
-
-  '@types/html2canvas@1.0.0':
-    dependencies:
-      html2canvas: 1.4.1
 
   '@types/js-cookie@2.2.7': {}
 

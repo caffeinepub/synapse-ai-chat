@@ -1,0 +1,22 @@
+{
+  "name": "Cyber Attack",
+  "short_name": "Cyber Attack",
+  "description": "Dramatic hacking prank terminal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#00ff41",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/generated/cyber-attack-icon.dim_192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/generated/cyber-attack-icon.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
